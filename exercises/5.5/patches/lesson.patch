@@ -1,0 +1,1434 @@
+diff --git a/.github/workflows/pr-ci.yml b/.github/workflows/pr-ci.yml
+index 0055eb191cd8e4265502aa8a02f9240de0ae4b6f..dfc7b7990bb45efbb512d4f5b29c60b7fac8f069 100644
+--- a/.github/workflows/pr-ci.yml
++++ b/.github/workflows/pr-ci.yml
+@@ -322,10 +322,16 @@ jobs:
+       environment_creation_state: ${{ steps.environment-lifecycle.outputs.environment_creation_state }}
+       test_execution_state: ${{ steps.environment-lifecycle.outputs.test_execution_state }}
+       test_result: ${{ steps.environment-lifecycle.outputs.test_result }}
++      infrastructure_test_execution_state: ${{ steps.environment-lifecycle.outputs.infrastructure_test_execution_state }}
++      infrastructure_test_result: ${{ steps.environment-lifecycle.outputs.infrastructure_test_result }}
++      api_test_execution_state: ${{ steps.environment-lifecycle.outputs.api_test_execution_state }}
++      api_test_result: ${{ steps.environment-lifecycle.outputs.api_test_result }}
+       cleanup_state: ${{ steps.environment-lifecycle.outputs.cleanup_state }}
+       cleanup_warning: ${{ steps.environment-lifecycle.outputs.cleanup_warning }}
+       cleanup_target_count: ${{ steps.environment-lifecycle.outputs.cleanup_target_count }}
+       remaining_resource_count: ${{ steps.environment-lifecycle.outputs.remaining_resource_count }}
++      missing_evidence_count: ${{ steps.environment-lifecycle.outputs.missing_evidence_count }}
++      environment_evidence_complete: ${{ steps.environment-lifecycle.outputs.environment_evidence_complete }}
+       residue_verification_result: ${{ steps.environment-lifecycle.outputs.residue_verification_result }}
+       evidence_artifact_name: ${{ steps.environment-lifecycle.outputs.evidence_artifact_name }}
+       evidence_artifact_uploaded: ${{ steps.upload-environment-evidence.outcome == 'success' }}
+@@ -468,9 +474,15 @@ jobs:
+           ENVIRONMENT_EVIDENCE_MANIFEST_FINALIZED: ${{ needs.environment-lifecycle.outputs.environment_evidence_manifest_finalized }}
+           ENVIRONMENT_CREATION_STATE: ${{ needs.environment-lifecycle.outputs.environment_creation_state }}
+           ENVIRONMENT_TEST_RESULT: ${{ needs.environment-lifecycle.outputs.test_result }}
++          INFRASTRUCTURE_TEST_EXECUTION_STATE: ${{ needs.environment-lifecycle.outputs.infrastructure_test_execution_state }}
++          INFRASTRUCTURE_TEST_RESULT: ${{ needs.environment-lifecycle.outputs.infrastructure_test_result }}
++          API_TEST_EXECUTION_STATE: ${{ needs.environment-lifecycle.outputs.api_test_execution_state }}
++          API_TEST_RESULT: ${{ needs.environment-lifecycle.outputs.api_test_result }}
+           CLEANUP_STATE: ${{ needs.environment-lifecycle.outputs.cleanup_state }}
+           CLEANUP_WARNING: ${{ needs.environment-lifecycle.outputs.cleanup_warning }}
+           REMAINING_RESOURCE_COUNT: ${{ needs.environment-lifecycle.outputs.remaining_resource_count }}
++          MISSING_EVIDENCE_COUNT: ${{ needs.environment-lifecycle.outputs.missing_evidence_count }}
++          ENVIRONMENT_EVIDENCE_COMPLETE: ${{ needs.environment-lifecycle.outputs.environment_evidence_complete }}
+           ISSUE_NUMBER: ${{ needs.governance-check.outputs.issue_number }}
+           TARGET_VERSION: ${{ needs.governance-check.outputs.target_version }}
+           REQUIRED_FINAL_STAGE: ${{ needs.governance-check.outputs.required_final_stage }}
+diff --git a/scripts/pr-ci/environment_lifecycle.py b/scripts/pr-ci/environment_lifecycle.py
+index 70626dfdb8e04cd18fcaedbaf0560374e2fd0514..d50c700e641f08e692e7f5aae666d25b596c2eb0 100644
+--- a/scripts/pr-ci/environment_lifecycle.py
++++ b/scripts/pr-ci/environment_lifecycle.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+
+ import argparse
+ import hashlib
++import os
+ import json
+ import re
+ import stat
+@@ -14,6 +15,7 @@ from dataclasses import dataclass, field
+ from pathlib import Path
+ from typing import Any
+ from urllib.request import urlopen
++import xml.etree.ElementTree as ET
+
+ from pr_ci_common import (
+     append_step_summary,
+@@ -41,6 +43,25 @@ EXPECTED_EVIDENCE = [
+     "logs/docker-state-after-cleanup.txt",
+     "logs/nginx.log",
+     "logs/go-app.log",
++    "logs/infrastructure-test.log",
++    "logs/api-test.log",
++    "test-results/infrastructure-test-junit.xml",
++    "test-results/api-test-junit.xml",
++    "test-results/infrastructure-test-result.json",
++    "test-results/api-test-result.json",
++    "summaries/infrastructure-test-summary.md",
++    "summaries/api-test-summary.md",
++]
++
++INFRASTRUCTURE_TEST_RESULT_FILES = [
++    "test-results/infrastructure-test-junit.xml",
++    "test-results/infrastructure-test-result.json",
++    "summaries/infrastructure-test-summary.md",
++]
++API_TEST_RESULT_FILES = [
++    "test-results/api-test-junit.xml",
++    "test-results/api-test-result.json",
++    "summaries/api-test-summary.md",
+ ]
+
+ MANAGED_BY = "github-actions-pr-ci"
+@@ -62,6 +83,8 @@ class CommandResult:
+ class LifecycleState:
+     failure_reasons: list[str] = field(default_factory=list)
+     warnings: list[str] = field(default_factory=list)
++    detected_missing_evidence: list[str] = field(default_factory=list)
++    evidence_missing_reasons: list[str] = field(default_factory=list)
+     prerequisites_met: bool = False
+     upstream_ready: bool = False
+     artifact_ready: bool = False
+@@ -69,6 +92,10 @@ class LifecycleState:
+     environment_creation_state: str = "NotStarted"
+     test_execution_state: str = "NotStarted"
+     test_result: str = "FailedBeforeTest"
++    infrastructure_test_execution_state: str = "NotStarted"
++    infrastructure_test_result: str = "FailedBeforeTest"
++    api_test_execution_state: str = "NotStarted"
++    api_test_result: str = "FailedBeforeTest"
+     cleanup_state: str = "NotAttempted"
+     cleanup_warning: bool = False
+     cleanup_target_count: int = 0
+@@ -84,7 +111,9 @@ class LifecycleState:
+
+
+ def parse_args(argv: list[str]) -> argparse.Namespace:
+-    parser = argparse.ArgumentParser(description="Run the Lesson 5.4 disposable UT environment lifecycle.")
++    parser = argparse.ArgumentParser(
++        description="Run the Lesson 5.5 disposable UT environment lifecycle."
++    )
+     parser.add_argument("--output-dir", required=True)
+     parser.add_argument("--build-artifact-dir", required=True)
+     parser.add_argument("--repository", required=True)
+@@ -152,6 +181,166 @@ def write_log(path: Path, message: str) -> None:
+     path.write_text(message if message.endswith("\n") else message + "\n", encoding="utf-8")
+
+
++def record_missing_evidence(state: LifecycleState, relative_path: str, reason: str) -> None:
++    if relative_path not in state.detected_missing_evidence:
++        state.detected_missing_evidence.append(relative_path)
++    state.evidence_missing_reasons.append(f"{relative_path}: {reason}")
++
++
++def write_junit_placeholder(
++    path: Path,
++    *,
++    suite_name: str,
++    case_name: str,
++    result: str,
++    message: str,
++) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    failures = "1" if result == "Failed" else "0"
++    skipped = "1" if result in ("Skipped", "FailedBeforeTest") else "0"
++    suite = ET.Element(
++        "testsuite",
++        {
++            "name": suite_name,
++            "tests": "1",
++            "failures": failures,
++            "errors": "0",
++            "skipped": skipped,
++        },
++    )
++    case = ET.SubElement(
++        suite,
++        "testcase",
++        {
++            "classname": suite_name,
++            "name": case_name,
++        },
++    )
++    if result == "Failed":
++        failure = ET.SubElement(case, "failure", {"message": message})
++        failure.text = message
++    elif result in ("Skipped", "FailedBeforeTest"):
++        skipped_element = ET.SubElement(case, "skipped", {"message": message})
++        skipped_element.text = message
++    tree = ET.ElementTree(suite)
++    tree.write(path, encoding="utf-8", xml_declaration=True)
++
++
++def write_test_result_artifacts(
++    *,
++    output_dir: Path,
++    test_key: str,
++    title: str,
++    execution_state: str,
++    result: str,
++    command: list[str],
++    returncode: int | None,
++    log_path: str,
++    junit_path: str,
++    result_path: str,
++    summary_path: str,
++    failure_reasons: list[str],
++    skipped_reason: str = "",
++) -> dict[str, Any]:
++    payload = {
++        "execution_state": execution_state,
++        "result": result,
++        "command": command,
++        "returncode": returncode,
++        "log_path": log_path,
++        "junit_xml": junit_path if (output_dir / junit_path).exists() else "<missing>",
++        "summary": summary_path,
++        "failure_reasons": failure_reasons,
++        "skipped_reason": skipped_reason,
++    }
++    write_json(output_dir / result_path, payload)
++
++    reasons = failure_reasons or ([skipped_reason] if skipped_reason else ["なし"])
++    reason_lines = "\n".join(f"- {reason}" for reason in reasons)
++    summary = "\n".join(
++        [
++            f"# {title} Summary",
++            "",
++            "| Item | Value |",
++            "|---|---|",
++            f"| Execution state | `{execution_state}` |",
++            f"| Result | `{result}` |",
++            f"| Return code | `{returncode if returncode is not None else '<not-run>'}` |",
++            f"| Log | `{log_path}` |",
++            f"| JUnit XML | `{payload['junit_xml']}` |",
++            "",
++            "## Reasons",
++            "",
++            reason_lines,
++            "",
++        ]
++    )
++    (output_dir / summary_path).parent.mkdir(parents=True, exist_ok=True)
++    (output_dir / summary_path).write_text(summary, encoding="utf-8")
++    return payload
++
++
++def write_skipped_test_artifacts(
++    *,
++    output_dir: Path,
++    test_key: str,
++    title: str,
++    result: str,
++    reason: str,
++) -> dict[str, Any]:
++    junit_path = f"test-results/{test_key}-test-junit.xml"
++    result_path = f"test-results/{test_key}-test-result.json"
++    summary_path = f"summaries/{test_key}-test-summary.md"
++    log_path = f"logs/{test_key}-test.log"
++    write_log(output_dir / log_path, reason)
++    write_junit_placeholder(
++        output_dir / junit_path,
++        suite_name=f"{test_key}-test",
++        case_name=f"{test_key}_test_not_run",
++        result=result,
++        message=reason,
++    )
++    return write_test_result_artifacts(
++        output_dir=output_dir,
++        test_key=test_key,
++        title=title,
++        execution_state="Skipped",
++        result=result,
++        command=[],
++        returncode=None,
++        log_path=log_path,
++        junit_path=junit_path,
++        result_path=result_path,
++        summary_path=summary_path,
++        failure_reasons=[],
++        skipped_reason=reason,
++    )
++
++
++def ensure_unstarted_test_artifacts(output_dir: Path, state: LifecycleState) -> None:
++    reason = "Formal tests did not start because environment lifecycle failed before test execution."
++    if state.infrastructure_test_execution_state == "NotStarted":
++        write_skipped_test_artifacts(
++            output_dir=output_dir,
++            test_key="infrastructure",
++            title="infrastructure-test",
++            result="FailedBeforeTest",
++            reason=reason,
++        )
++        state.infrastructure_test_execution_state = "Skipped"
++        state.infrastructure_test_result = "FailedBeforeTest"
++    if state.api_test_execution_state == "NotStarted":
++        write_skipped_test_artifacts(
++            output_dir=output_dir,
++            test_key="api",
++            title="api-test",
++            result="FailedBeforeTest",
++            reason=reason,
++        )
++        state.api_test_execution_state = "Skipped"
++        state.api_test_result = "FailedBeforeTest"
++
++
+ def run_command(
+     args: list[str],
+     *,
+@@ -159,6 +348,7 @@ def run_command(
+     log_path: Path,
+     append: bool = False,
+     check: bool = False,
++    env: dict[str, str] | None = None,
+ ) -> CommandResult:
+     log_path.parent.mkdir(parents=True, exist_ok=True)
+     try:
+@@ -168,6 +358,7 @@ def run_command(
+             text=True,
+             stdout=subprocess.PIPE,
+             stderr=subprocess.STDOUT,
++            env=env,
+             check=False,
+         )
+         result = CommandResult(args, completed.returncode, completed.stdout or "")
+@@ -395,13 +586,13 @@ def run_ansible_and_checks(
+     output_dir: Path,
+     logs_dir: Path,
+     outputs: dict[str, str],
+-) -> None:
++) -> bool:
+     inventory = output_dir / "inventory.yml"
+     if not inventory.exists():
+         state.failure_reasons.append("Ansible inventory was not created")
+-        state.test_execution_state = "NotStarted"
++        state.test_execution_state = "Failed"
+         state.test_result = "FailedBeforeTest"
+-        return
++        return False
+
+     ansible_log = logs_dir / "ansible.log"
+     infra = run_command(
+@@ -414,7 +605,7 @@ def run_ansible_and_checks(
+         state.failure_reasons.append("Ansible infra configuration failed")
+         state.test_execution_state = "Failed"
+         state.test_result = "Failed"
+-        return
++        return False
+
+     binary_path = Path(args.build_artifact_dir) / "go-app-linux-amd64"
+     deploy = run_command(
+@@ -436,14 +627,14 @@ def run_ansible_and_checks(
+         state.failure_reasons.append("Ansible app deploy failed")
+         state.test_execution_state = "Failed"
+         state.test_result = "Failed"
+-        return
++        return False
+
+     container_name = outputs.get("container_name", "")
+     if not container_name:
+         state.failure_reasons.append("container_name output is missing")
+         state.test_execution_state = "Failed"
+         state.test_result = "Failed"
+-        return
++        return False
+
+     check_log = logs_dir / "startup-connectivity-check.log"
+     checks = [
+@@ -515,8 +706,184 @@ def run_ansible_and_checks(
+             state.failure_reasons.append("host nginx health request failed")
+             failed = True
+
+-    state.test_execution_state = "Failed" if failed else "Completed"
+-    state.test_result = "Failed" if failed else "Passed"
++    if failed:
++        state.test_execution_state = "Failed"
++        state.test_result = "Failed"
++        return False
++    return True
++
++
++def run_pytest_suite(
++    *,
++    state: LifecycleState,
++    test_key: str,
++    title: str,
++    command: list[str],
++    env: dict[str, str],
++    root: Path,
++    output_dir: Path,
++) -> tuple[str, str]:
++    log_path = f"logs/{test_key}-test.log"
++    junit_path = f"test-results/{test_key}-test-junit.xml"
++    result_path = f"test-results/{test_key}-test-result.json"
++    summary_path = f"summaries/{test_key}-test-summary.md"
++    result = run_command(
++        command,
++        cwd=root,
++        log_path=output_dir / log_path,
++        env=env,
++    )
++    failure_reasons: list[str] = []
++    if result.returncode != 0:
++        failure_reasons.append(f"{title} exited with rc={result.returncode}")
++    if not (output_dir / junit_path).exists():
++        reason = f"JUnit XML was not created at {junit_path}"
++        record_missing_evidence(state, junit_path, reason)
++        failure_reasons.append(reason)
++        write_junit_placeholder(
++            output_dir / junit_path,
++            suite_name=f"{test_key}-test",
++            case_name=f"{test_key}_test_junit_missing",
++            result="Failed",
++            message=reason,
++        )
++
++    execution_state = "Failed" if failure_reasons else "Completed"
++    test_result = "Failed" if failure_reasons else "Passed"
++    write_test_result_artifacts(
++        output_dir=output_dir,
++        test_key=test_key,
++        title=title,
++        execution_state=execution_state,
++        result=test_result,
++        command=result.command,
++        returncode=result.returncode,
++        log_path=log_path,
++        junit_path=junit_path,
++        result_path=result_path,
++        summary_path=summary_path,
++        failure_reasons=failure_reasons,
++    )
++    return execution_state, test_result
++
++
++def run_formal_tests(
++    args: argparse.Namespace,
++    state: LifecycleState,
++    *,
++    root: Path,
++    output_dir: Path,
++    outputs: dict[str, str],
++) -> None:
++    container_name = outputs.get("container_name", "")
++    network_name = outputs.get("network_name", "")
++    host_http_url = outputs.get("host_http_url", "")
++    if not container_name or not network_name or not host_http_url:
++        reason = "Terraform outputs required for formal tests are incomplete."
++        state.failure_reasons.append(reason)
++        write_skipped_test_artifacts(
++            output_dir=output_dir,
++            test_key="infrastructure",
++            title="infrastructure-test",
++            result="FailedBeforeTest",
++            reason=reason,
++        )
++        write_skipped_test_artifacts(
++            output_dir=output_dir,
++            test_key="api",
++            title="api-test",
++            result="FailedBeforeTest",
++            reason=reason,
++        )
++        state.infrastructure_test_execution_state = "Skipped"
++        state.infrastructure_test_result = "FailedBeforeTest"
++        state.api_test_execution_state = "Skipped"
++        state.api_test_result = "FailedBeforeTest"
++        state.test_execution_state = "Failed"
++        state.test_result = "Failed"
++        return
++
++    test_env = os.environ.copy()
++    test_env.update(
++        {
++            "TARGET_CONTAINER_NAME": container_name,
++            "TARGET_NETWORK_NAME": network_name,
++            "EXPECTED_ENVIRONMENT_FACE_ID": state.environment_face_id,
++            "EXPECTED_TEST_RUN_ID": args.test_run_id,
++            "EXPECTED_ISSUE_NUMBER": args.issue_number,
++            "EXPECTED_APP_VERSION": args.build_artifact_version,
++            "APP_VERSION": args.build_artifact_version,
++            "HOST_HTTP_URL": host_http_url,
++            "API_BASE_URL": host_http_url,
++            "EXPECTED_MANAGED_BY": MANAGED_BY,
++        }
++    )
++
++    infra_command = [
++        sys.executable,
++        "-m",
++        "pytest",
++        "-q",
++        "--junitxml",
++        str(output_dir / "test-results" / "infrastructure-test-junit.xml"),
++        f"--hosts=docker://{container_name}",
++        "tests/infrastructure",
++    ]
++    infra_state, infra_result = run_pytest_suite(
++        state=state,
++        test_key="infrastructure",
++        title="infrastructure-test",
++        command=infra_command,
++        env=test_env,
++        root=root,
++        output_dir=output_dir,
++    )
++    state.infrastructure_test_execution_state = infra_state
++    state.infrastructure_test_result = infra_result
++    if infra_result != "Passed":
++        state.failure_reasons.append("infrastructure-test failed")
++        reason = "API test was skipped because infrastructure-test did not pass."
++        write_skipped_test_artifacts(
++            output_dir=output_dir,
++            test_key="api",
++            title="api-test",
++            result="Skipped",
++            reason=reason,
++        )
++        state.api_test_execution_state = "Skipped"
++        state.api_test_result = "Skipped"
++        state.test_execution_state = "Failed"
++        state.test_result = "Failed"
++        return
++
++    api_command = [
++        sys.executable,
++        "-m",
++        "pytest",
++        "-q",
++        "--junitxml",
++        str(output_dir / "test-results" / "api-test-junit.xml"),
++        "tests/api",
++    ]
++    api_state, api_result = run_pytest_suite(
++        state=state,
++        test_key="api",
++        title="api-test",
++        command=api_command,
++        env=test_env,
++        root=root,
++        output_dir=output_dir,
++    )
++    state.api_test_execution_state = api_state
++    state.api_test_result = api_result
++    if api_result != "Passed":
++        state.failure_reasons.append("api-test failed")
++        state.test_execution_state = "Failed"
++        state.test_result = "Failed"
++        return
++
++    state.test_execution_state = "Completed"
++    state.test_result = "Passed"
+
+
+ def collect_logs(root: Path, logs_dir: Path, container_name: str) -> None:
+@@ -698,10 +1065,14 @@ def build_summary(manifest: dict[str, Any], result_payload: dict[str, Any]) -> s
+             f"| Environment creation state | `{manifest['environment_creation_state']}` |",
+             f"| Test execution state | `{manifest['test_execution_state']}` |",
+             f"| Test result | `{manifest['test_result']}` |",
++            f"| Infrastructure test | `{manifest['infrastructure_test_execution_state']} / {manifest['infrastructure_test_result']}` |",
++            f"| API test | `{manifest['api_test_execution_state']} / {manifest['api_test_result']}` |",
+             f"| Cleanup state | `{manifest['cleanup_state']}` |",
+             f"| Cleanup target count | `{manifest['cleanup_target_count']}` |",
+             f"| Remaining resource count | `{manifest['remaining_resource_count']}` |",
+             f"| Cleanup warning | `{str(manifest['cleanup_warning']).lower()}` |",
++            f"| Missing evidence count | `{manifest['missing_evidence_count']}` |",
++            f"| Environment evidence complete | `{str(manifest['environment_evidence_complete']).lower()}` |",
+             f"| Evidence Artifact | `{manifest['artifact_name']}` |",
+             "",
+             "## Failure reasons",
+@@ -752,12 +1123,24 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
+         target_version=args.target_version,
+         required_final_stage=args.required_final_stage,
+     )
++    merged_missing = sorted(
++        set(manifest.get("missing_evidence", [])) | set(state.detected_missing_evidence)
++    )
++    manifest["missing_evidence"] = merged_missing
++    manifest["missing_evidence_count"] = len(merged_missing)
++    manifest["environment_evidence_complete"] = manifest["missing_evidence_count"] == 0
+     manifest.update(
+         {
+             "environment_face_id_or_not_created": state.environment_face_id or "NOT_CREATED",
+             "environment_creation_state": state.environment_creation_state,
+             "test_execution_state": state.test_execution_state,
+             "test_result": state.test_result,
++            "infrastructure_test_execution_state": state.infrastructure_test_execution_state,
++            "infrastructure_test_result": state.infrastructure_test_result,
++            "infrastructure_test_result_files": INFRASTRUCTURE_TEST_RESULT_FILES,
++            "api_test_execution_state": state.api_test_execution_state,
++            "api_test_result": state.api_test_result,
++            "api_test_result_files": API_TEST_RESULT_FILES,
+             "cleanup_state": state.cleanup_state,
+             "cleanup_target_count": state.cleanup_target_count,
+             "remaining_resource_count": state.remaining_resource_count,
+@@ -777,6 +1160,12 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
+         "artifact_ready": state.artifact_ready,
+         "failure_reasons": state.failure_reasons,
+         "warnings": state.warnings,
++        "evidence": {
++            "missing_evidence": manifest["missing_evidence"],
++            "missing_evidence_count": manifest["missing_evidence_count"],
++            "environment_evidence_complete": manifest["environment_evidence_complete"],
++            "evidence_missing_reasons": state.evidence_missing_reasons,
++        },
+         "build_artifact": {
+             "name": args.build_artifact_name,
+             "id": args.build_artifact_id,
+@@ -789,6 +1178,18 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
+             "test_execution_state": state.test_execution_state,
+             "test_result": state.test_result,
+         },
++        "tests": {
++            "infrastructure": {
++                "execution_state": state.infrastructure_test_execution_state,
++                "result": state.infrastructure_test_result,
++                "result_files": INFRASTRUCTURE_TEST_RESULT_FILES,
++            },
++            "api": {
++                "execution_state": state.api_test_execution_state,
++                "result": state.api_test_result,
++                "result_files": API_TEST_RESULT_FILES,
++            },
++        },
+         "cleanup": {
+             "cleanup_state": state.cleanup_state,
+             "cleanup_warning": state.cleanup_warning,
+@@ -852,7 +1253,7 @@ def main(argv: list[str]) -> int:
+                 )
+
+             if state.environment_creation_state == "Completed":
+-                run_ansible_and_checks(
++                startup_ready = run_ansible_and_checks(
+                     args,
+                     state,
+                     root=root,
+@@ -860,6 +1261,14 @@ def main(argv: list[str]) -> int:
+                     logs_dir=logs_dir,
+                     outputs=outputs,
+                 )
++                if startup_ready:
++                    run_formal_tests(
++                        args,
++                        state,
++                        root=root,
++                        output_dir=output_dir,
++                        outputs=outputs,
++                    )
+         else:
+             write_log(logs_dir / "terraform-plan.log", "Upstream prerequisites were not met; Terraform plan was skipped.")
+             write_log(logs_dir / "terraform-apply.log", "Upstream prerequisites were not met; Terraform apply was skipped.")
+@@ -869,6 +1278,7 @@ def main(argv: list[str]) -> int:
+         collect_logs(root, logs_dir, outputs.get("container_name", "") if outputs else "")
+         cleanup(args, state, root=root, logs_dir=logs_dir, label_filter=label_filter, image_name=image_name)
+         verify_residue(state, root=root, logs_dir=logs_dir, label_filter=label_filter)
++        ensure_unstarted_test_artifacts(output_dir, state)
+         ensure_placeholder_logs(logs_dir)
+
+     manifest, result_payload, summary = finalize_result(args, state, output_dir)
+@@ -886,10 +1296,16 @@ def main(argv: list[str]) -> int:
+             "environment_creation_state": state.environment_creation_state,
+             "test_execution_state": state.test_execution_state,
+             "test_result": state.test_result,
++            "infrastructure_test_execution_state": state.infrastructure_test_execution_state,
++            "infrastructure_test_result": state.infrastructure_test_result,
++            "api_test_execution_state": state.api_test_execution_state,
++            "api_test_result": state.api_test_result,
+             "cleanup_state": state.cleanup_state,
+             "cleanup_warning": state.cleanup_warning,
+             "cleanup_target_count": state.cleanup_target_count,
+             "remaining_resource_count": state.remaining_resource_count,
++            "missing_evidence_count": manifest["missing_evidence_count"],
++            "environment_evidence_complete": manifest["environment_evidence_complete"],
+             "residue_verification_result": state.residue_verification_result,
+             "failure_reason_count": len(state.failure_reasons),
+         },
+diff --git a/scripts/pr-ci/governance_check.py b/scripts/pr-ci/governance_check.py
+index a32125aa6e6617bf91115f31eb5c311c5dc77616..9cc8a400448213724b4fb7f0759233be821cb06d 100644
+--- a/scripts/pr-ci/governance_check.py
++++ b/scripts/pr-ci/governance_check.py
+@@ -291,7 +291,7 @@ def write_github_output(path: str, manifest: dict[str, Any], result: dict[str, A
+
+
+ def parse_args(argv: list[str]) -> argparse.Namespace:
+-    parser = argparse.ArgumentParser(description="Run Lesson 5.2 PR CI governance checks.")
++    parser = argparse.ArgumentParser(description="Run the Lesson 5.2 PR CI governance checks.")
+     parser.add_argument("--event-path", required=True)
+     parser.add_argument("--output-dir", required=True)
+     parser.add_argument("--repository", required=True)
+diff --git a/scripts/pr-ci/pr_ci_gate.py b/scripts/pr-ci/pr_ci_gate.py
+index 9229e787c8642b48af8c8aa3ee0bb80ff3dd9d4b..7482dd5afb55468021628ba816f0d1e36abd7d96 100644
+--- a/scripts/pr-ci/pr_ci_gate.py
++++ b/scripts/pr-ci/pr_ci_gate.py
+@@ -47,6 +47,19 @@ def require_uploaded_artifact(
+         reasons.append(f"{label} Artifact upload did not succeed")
+
+
++def require_int_value(reasons: list[str], label: str, value: str, expected: int) -> None:
++    require_value(reasons, label, value)
++    if not value:
++        return
++    try:
++        actual = int(value)
++    except ValueError:
++        reasons.append(f"{label} is not an integer. actual={value}")
++        return
++    if actual != expected:
++        reasons.append(f"{label} is {actual}; expected={expected}")
++
++
+ def evaluate_gate(env: dict[str, str]) -> dict[str, Any]:
+     reasons: list[str] = []
+
+@@ -131,6 +144,40 @@ def evaluate_gate(env: dict[str, str]) -> dict[str, Any]:
+     if test_result != "Passed":
+         reasons.append(f"environment test_result is {test_result or '<missing>'}")
+
++    infrastructure_execution_state = env_value("INFRASTRUCTURE_TEST_EXECUTION_STATE", env)
++    if infrastructure_execution_state != "Completed":
++        reasons.append(
++            "infrastructure_test_execution_state is "
++            f"{infrastructure_execution_state or '<missing>'}"
++        )
++
++    infrastructure_result = env_value("INFRASTRUCTURE_TEST_RESULT", env)
++    if infrastructure_result != "Passed":
++        reasons.append(f"infrastructure_test_result is {infrastructure_result or '<missing>'}")
++
++    api_execution_state = env_value("API_TEST_EXECUTION_STATE", env)
++    if api_execution_state != "Completed":
++        reasons.append(f"api_test_execution_state is {api_execution_state or '<missing>'}")
++
++    api_result = env_value("API_TEST_RESULT", env)
++    if api_result != "Passed":
++        reasons.append(f"api_test_result is {api_result or '<missing>'}")
++
++    require_int_value(
++        reasons,
++        "remaining_resource_count",
++        env_value("REMAINING_RESOURCE_COUNT", env),
++        0,
++    )
++    require_int_value(
++        reasons,
++        "missing_evidence_count",
++        env_value("MISSING_EVIDENCE_COUNT", env),
++        0,
++    )
++    if not is_true(env_value("ENVIRONMENT_EVIDENCE_COMPLETE", env)):
++        reasons.append("environment evidence is not complete")
++
+     gate_result = "success" if not reasons else "failure"
+     return {
+         "gate_result": gate_result,
+@@ -160,9 +207,25 @@ def build_summary(env: dict[str, str], result: dict[str, Any]) -> str:
+         ("Environment lifecycle result", env_value("ENVIRONMENT_LIFECYCLE_RESULT", env) or "<missing>"),
+         ("Environment creation state", env_value("ENVIRONMENT_CREATION_STATE", env) or "<missing>"),
+         ("Environment test result", env_value("ENVIRONMENT_TEST_RESULT", env) or "<missing>"),
++        (
++            "Infrastructure test",
++            (
++                f"{env_value('INFRASTRUCTURE_TEST_EXECUTION_STATE', env) or '<missing>'} / "
++                f"{env_value('INFRASTRUCTURE_TEST_RESULT', env) or '<missing>'}"
++            ),
++        ),
++        (
++            "API test",
++            (
++                f"{env_value('API_TEST_EXECUTION_STATE', env) or '<missing>'} / "
++                f"{env_value('API_TEST_RESULT', env) or '<missing>'}"
++            ),
++        ),
+         ("Cleanup state", env_value("CLEANUP_STATE", env) or "<missing>"),
+         ("Cleanup warning", env_value("CLEANUP_WARNING", env) or "<missing>"),
+         ("Remaining resource count", env_value("REMAINING_RESOURCE_COUNT", env) or "<missing>"),
++        ("Missing evidence count", env_value("MISSING_EVIDENCE_COUNT", env) or "<missing>"),
++        ("Environment evidence complete", env_value("ENVIRONMENT_EVIDENCE_COMPLETE", env) or "<missing>"),
+         ("Build Artifact", env_value("BUILD_ARTIFACT_NAME", env) or "<missing>"),
+         ("Build Artifact ID", env_value("BUILD_ARTIFACT_ID", env) or "<missing>"),
+         ("Build Artifact version", env_value("BUILD_ARTIFACT_VERSION", env) or "<missing>"),
+@@ -187,7 +250,7 @@ def build_summary(env: dict[str, str], result: dict[str, Any]) -> str:
+
+
+ def parse_args(argv: list[str]) -> argparse.Namespace:
+-    parser = argparse.ArgumentParser(description="Evaluate the Lesson 5.4 PR CI gate.")
++    parser = argparse.ArgumentParser(description="Evaluate the Lesson 5.5 PR CI gate.")
+     parser.add_argument("--github-step-summary")
+     return parser.parse_args(argv)
+
+diff --git a/scripts/pr-ci/static_analysis.py b/scripts/pr-ci/static_analysis.py
+index 651054d25abb72442982a5a054d3884bed8e5f45..55334510484e686a32ac2114058e221460114403 100644
+--- a/scripts/pr-ci/static_analysis.py
++++ b/scripts/pr-ci/static_analysis.py
+@@ -71,7 +71,7 @@ def build_summary(
+
+
+ def parse_args(argv: list[str]) -> argparse.Namespace:
+-    parser = argparse.ArgumentParser(description="Run Lesson 5.3 Go app static analysis.")
++    parser = argparse.ArgumentParser(description="Run the Lesson 5.3 Go app static analysis.")
+     parser.add_argument("--output-dir", required=True)
+     parser.add_argument("--repository", required=True)
+     parser.add_argument("--workflow-run-id", required=True)
+diff --git a/scripts/pr-ci/unit_test.py b/scripts/pr-ci/unit_test.py
+index 9f8c9b676f1c90cd11b6f619eaf87b93b7a8164a..3b9875d0883810297b3908a04d11889b5b1f4d96 100644
+--- a/scripts/pr-ci/unit_test.py
++++ b/scripts/pr-ci/unit_test.py
+@@ -49,7 +49,7 @@ def build_summary(*, manifest: dict[str, Any], result_payload: dict[str, Any]) -
+
+
+ def parse_args(argv: list[str]) -> argparse.Namespace:
+-    parser = argparse.ArgumentParser(description="Run Lesson 5.3 Go unit tests.")
++    parser = argparse.ArgumentParser(description="Run the Lesson 5.3 Go unit tests.")
+     parser.add_argument("--output-dir", required=True)
+     parser.add_argument("--repository", required=True)
+     parser.add_argument("--workflow-run-id", required=True)
+diff --git a/tests/api/test_health.py b/tests/api/test_health.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..6b54421a637842c1377ded6b225d22af7baad729
+--- /dev/null
++++ b/tests/api/test_health.py
+@@ -0,0 +1,87 @@
++# Copyright 2026 Ranamicus Technology LLC. All rights reserved.
++
++import json
++import os
++import subprocess
++
++import pytest
++import requests
++
++
++REQUIRED_ENV = (
++    "API_BASE_URL",
++)
++
++
++def expected_app_version():
++    return os.environ.get("EXPECTED_APP_VERSION") or os.environ.get("APP_VERSION", "")
++
++
++@pytest.fixture(autouse=True)
++def require_api_inputs():
++    missing = [name for name in REQUIRED_ENV if not os.environ.get(name)]
++    if not expected_app_version():
++        missing.append("EXPECTED_APP_VERSION or APP_VERSION")
++    if missing:
++        pytest.skip("Lesson 5.5 API tests require environment inputs: " + ", ".join(missing))
++
++
++@pytest.fixture
++def base_url():
++    return os.environ["API_BASE_URL"].rstrip("/")
++
++
++def test_health_endpoint_via_nginx(base_url):
++    expected_version = expected_app_version()
++    response = requests.get(f"{base_url}/health", timeout=5)
++
++    assert response.status_code == 200
++    assert response.headers["content-type"].startswith("application/json")
++
++    payload = response.json()
++    assert payload["status"] == "ok"
++    assert payload["service"] == "ms1-go-api"
++    assert payload["version"] == expected_version
++
++
++def test_health_endpoint_rejects_unsupported_method(base_url):
++    response = requests.post(f"{base_url}/health", timeout=5)
++
++    assert response.status_code == 405
++
++
++def test_unknown_path_returns_not_found(base_url):
++    response = requests.get(f"{base_url}/not-found", timeout=5)
++
++    assert response.status_code == 404
++
++
++def test_direct_container_health_matches_nginx_when_container_is_available():
++    container_name = os.environ.get("TARGET_CONTAINER_NAME")
++    if not container_name:
++        pytest.skip("TARGET_CONTAINER_NAME is not available for direct container check.")
++
++    completed = subprocess.run(
++        [
++            "docker",
++            "exec",
++            container_name,
++            "python3",
++            "-c",
++            (
++                "import json, urllib.request; "
++                "print(json.dumps(json.load("
++                "urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)), sort_keys=True))"
++            ),
++        ],
++        text=True,
++        stdout=subprocess.PIPE,
++        stderr=subprocess.PIPE,
++        check=False,
++    )
++    assert completed.returncode == 0, completed.stderr
++    payload = completed.stdout.strip()
++
++    proxied = requests.get(f"{os.environ['API_BASE_URL'].rstrip('/')}/health", timeout=5).json()
++    assert payload
++    assert payload == json.dumps(proxied, sort_keys=True)
+diff --git a/tests/infrastructure/test_ms1_target.py b/tests/infrastructure/test_ms1_target.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..ced079afa10b1a4db0c5fe7bb8fde5e9c9f91d85
+--- /dev/null
++++ b/tests/infrastructure/test_ms1_target.py
+@@ -0,0 +1,147 @@
++# Copyright 2026 Ranamicus Technology LLC. All rights reserved.
++
++import json
++import os
++import subprocess
++from pathlib import Path
++
++import pytest
++
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++
++
++def env_or_file(name, relative_path):
++    value = os.environ.get(name)
++    if value:
++        return value
++    path = REPO_ROOT / relative_path
++    if path.exists():
++        return path.read_text(encoding="utf-8").strip()
++    return ""
++
++
++def expected_app_version():
++    return os.environ.get("EXPECTED_APP_VERSION") or os.environ.get("APP_VERSION", "")
++
++
++@pytest.fixture(autouse=True)
++def require_environment_inputs():
++    missing = []
++    if not env_or_file("TARGET_CONTAINER_NAME", "dist/ms1/container_name.txt"):
++        missing.append("TARGET_CONTAINER_NAME or dist/ms1/container_name.txt")
++    if not env_or_file("TARGET_NETWORK_NAME", "dist/ms1/network_name.txt"):
++        missing.append("TARGET_NETWORK_NAME or dist/ms1/network_name.txt")
++    if not (os.environ.get("EXPECTED_ENVIRONMENT_FACE_ID") or os.environ.get("ENVIRONMENT_FACE_ID")):
++        missing.append("EXPECTED_ENVIRONMENT_FACE_ID or ENVIRONMENT_FACE_ID")
++    if not expected_app_version():
++        missing.append("EXPECTED_APP_VERSION or APP_VERSION")
++    if missing:
++        pytest.skip(
++            "Lesson 5.5 infrastructure tests require environment inputs: " + ", ".join(missing)
++        )
++
++
++def docker_inspect(resource_type, name):
++    completed = subprocess.run(
++        ["docker", "inspect", "--type", resource_type, name],
++        text=True,
++        stdout=subprocess.PIPE,
++        stderr=subprocess.PIPE,
++        check=False,
++    )
++    assert completed.returncode == 0, completed.stderr
++    payload = json.loads(completed.stdout)
++    assert len(payload) == 1
++    return payload[0]
++
++
++def assert_expected_labels(labels):
++    expected_pairs = []
++    environment_face_id = os.environ.get("EXPECTED_ENVIRONMENT_FACE_ID") or os.environ.get(
++        "ENVIRONMENT_FACE_ID"
++    )
++    if environment_face_id:
++        label_key = "environment_face_id" if "environment_face_id" in labels else "ranamicus.environment_face_id"
++        expected_pairs.append((label_key, environment_face_id))
++
++    if os.environ.get("EXPECTED_TEST_RUN_ID"):
++        expected_pairs.append(("test_run_id", os.environ["EXPECTED_TEST_RUN_ID"]))
++    if os.environ.get("EXPECTED_ISSUE_NUMBER"):
++        expected_pairs.append(("issue_number", os.environ["EXPECTED_ISSUE_NUMBER"]))
++    if os.environ.get("EXPECTED_MANAGED_BY"):
++        expected_pairs.append(("managed_by", os.environ["EXPECTED_MANAGED_BY"]))
++    managed_label_key = os.environ.get("EXPECTED_MANAGED_LABEL_KEY") or os.environ.get("MANAGED_LABEL_KEY")
++    managed_label_value = os.environ.get("EXPECTED_MANAGED_LABEL_VALUE") or os.environ.get(
++        "MANAGED_LABEL_VALUE",
++        "",
++    )
++    if managed_label_key:
++        expected_pairs.append(
++            (
++                managed_label_key,
++                managed_label_value,
++            )
++        )
++    if os.environ.get("EXPECTED_ENVIRONMENT_PATTERN_ID"):
++        expected_pairs.append(("environment_pattern_id", os.environ["EXPECTED_ENVIRONMENT_PATTERN_ID"]))
++    elif os.environ.get("EXPECTED_TEST_RUN_ID"):
++        expected_pairs.append(("environment_pattern_id", "UT"))
++
++    for key, value in expected_pairs:
++        assert labels.get(key) == value
++
++
++def test_nginx_is_installed(host):
++    assert host.package("nginx").is_installed
++
++
++def test_target_container_exists_and_has_expected_labels():
++    container = docker_inspect("container", env_or_file("TARGET_CONTAINER_NAME", "dist/ms1/container_name.txt"))
++    assert container["State"]["Running"] is True
++    assert_expected_labels(container["Config"]["Labels"])
++
++
++def test_target_network_exists_and_has_expected_labels():
++    network = docker_inspect("network", env_or_file("TARGET_NETWORK_NAME", "dist/ms1/network_name.txt"))
++    assert_expected_labels(network["Labels"])
++
++
++def test_nginx_configuration_file_exists(host):
++    config = host.file("/etc/nginx/sites-enabled/ms1-app.conf")
++    assert config.exists
++    assert config.is_symlink
++
++
++def test_nginx_configuration_is_valid(host):
++    result = host.run("nginx -t")
++    assert result.rc == 0, result.stderr
++
++
++def test_required_ports_are_listening(host):
++    result = host.run("ss -ltn")
++    assert result.rc == 0, result.stderr
++    assert ":80 " in result.stdout
++    assert ":8080 " in result.stdout
++
++
++def test_go_application_binary_exists(host):
++    app = host.file("/opt/ms1-app/bin/ms1-app")
++    assert app.exists
++    assert app.is_file
++    assert app.mode & 0o111
++
++
++def test_go_application_process_is_running(host):
++    result = host.run("pgrep -af '/opt/ms1-app/bin/ms1-app'")
++    assert result.rc == 0, result.stderr
++
++
++def test_nginx_proxies_to_go_application(host):
++    expected_version = expected_app_version()
++    result = host.run("python3 -c 'import json, urllib.request; print(json.dumps(json.load(urllib.request.urlopen(\"http://127.0.0.1/health\", timeout=5)), sort_keys=True))'")
++    assert result.rc == 0, result.stderr
++    payload = json.loads(result.stdout)
++    assert payload["status"] == "ok"
++    assert payload["service"] == "ms1-go-api"
++    assert payload["version"] == expected_version
+diff --git a/tests/pr-ci/test_environment_lifecycle.py b/tests/pr-ci/test_environment_lifecycle.py
+index e7b4596977cf79b3bc39a60d18c2c79e2ac6a88b..2ea2feb58bab8bb7306461a60e5c3327e85ad358 100644
+--- a/tests/pr-ci/test_environment_lifecycle.py
++++ b/tests/pr-ci/test_environment_lifecycle.py
+@@ -4,6 +4,7 @@ import importlib.util
+ import hashlib
+ import json
+ import sys
++import xml.etree.ElementTree as ET
+ from pathlib import Path
+
+
+@@ -37,6 +38,83 @@ def test_environment_face_id_uses_issue_run_and_attempt():
+     assert environment_lifecycle.environment_face_id("7", "123456", "2") == "UT-7-123456-A2"
+
+
++def test_pytest_suite_writes_failure_placeholder_when_junit_is_missing(tmp_path):
++    output_dir = tmp_path / "evidence"
++    state = environment_lifecycle.LifecycleState()
++    original_run_command = environment_lifecycle.run_command
++
++    def fake_run_command(args, *, cwd, log_path, append=False, check=False, env=None):
++        environment_lifecycle.write_log(log_path, "$ pytest\npytest crashed before junit\n")
++        return environment_lifecycle.CommandResult(args, 2, "pytest crashed before junit\n")
++
++    environment_lifecycle.run_command = fake_run_command
++    try:
++        execution_state, result = environment_lifecycle.run_pytest_suite(
++            state=state,
++            test_key="infrastructure",
++            title="infrastructure-test",
++            command=[
++                "pytest",
++                "--junitxml",
++                str(output_dir / "test-results" / "infrastructure-test-junit.xml"),
++            ],
++            env={},
++            root=tmp_path,
++            output_dir=output_dir,
++        )
++    finally:
++        environment_lifecycle.run_command = original_run_command
++
++    assert execution_state == "Failed"
++    assert result == "Failed"
++    assert state.detected_missing_evidence == ["test-results/infrastructure-test-junit.xml"]
++    assert state.evidence_missing_reasons == [
++        "test-results/infrastructure-test-junit.xml: "
++        "JUnit XML was not created at test-results/infrastructure-test-junit.xml"
++    ]
++    junit_path = output_dir / "test-results" / "infrastructure-test-junit.xml"
++    payload = json.loads(
++        (output_dir / "test-results" / "infrastructure-test-result.json").read_text(encoding="utf-8")
++    )
++    assert payload["junit_xml"] == "test-results/infrastructure-test-junit.xml"
++    suite = ET.parse(junit_path).getroot()
++    assert suite.attrib["failures"] == "1"
++    assert suite.find("testcase/failure") is not None
++
++    for relative_path in environment_lifecycle.EXPECTED_EVIDENCE:
++        path = output_dir / relative_path
++        if not path.exists():
++            environment_lifecycle.write_log(path, "synthetic evidence\n")
++
++    args = environment_lifecycle.argparse.Namespace(
++        test_run_id="TR-UT-ISSUE-7-100-A1",
++        workflow_run_id="100",
++        workflow_run_attempt="1",
++        job_name="environment-lifecycle",
++        pr_number="8",
++        issue_number="7",
++        pr_head_sha="abc123",
++        repository="RanamicusTechnology/11-env-hands-on",
++        created_at="2026-07-05T00:00:00Z",
++        target_version="0.0.0",
++        required_final_stage="UT",
++        build_artifact_name="build-go-app_TR-UT-ISSUE-7-100-A1",
++        build_artifact_id="5",
++        build_artifact_version="v0.0.0+b.1.a.1",
++        build_artifact_checksum="abc",
++    )
++    manifest, result_payload, _summary = environment_lifecycle.finalize_result(
++        args,
++        state,
++        output_dir,
++    )
++    assert manifest["missing_evidence"] == ["test-results/infrastructure-test-junit.xml"]
++    assert manifest["missing_evidence_count"] == 1
++    assert manifest["environment_evidence_complete"] is False
++    assert result_payload["evidence"]["missing_evidence_count"] == 1
++    assert result_payload["evidence"]["environment_evidence_complete"] is False
++
++
+ def test_early_failure_finalizes_environment_evidence_without_docker(tmp_path):
+     output_dir = tmp_path / "evidence"
+     missing_build_dir = tmp_path / "missing-build-artifact"
+@@ -105,10 +183,18 @@ def test_early_failure_finalizes_environment_evidence_without_docker(tmp_path):
+     assert manifest["environment_face_id_or_not_created"] == "NOT_CREATED"
+     assert manifest["environment_creation_state"] == "NotStarted"
+     assert manifest["test_result"] == "FailedBeforeTest"
++    assert manifest["infrastructure_test_execution_state"] == "Skipped"
++    assert manifest["infrastructure_test_result"] == "FailedBeforeTest"
++    assert manifest["api_test_execution_state"] == "Skipped"
++    assert manifest["api_test_result"] == "FailedBeforeTest"
+     assert manifest["cleanup_state"] == "Completed"
+     assert manifest["cleanup_target_count"] == 0
+     assert manifest["remaining_resource_count"] == 0
+     assert "NotRequired" not in json.dumps(manifest)
++    assert (output_dir / "test-results" / "infrastructure-test-junit.xml").exists()
++    assert (output_dir / "test-results" / "api-test-result.json").exists()
++    assert result["tests"]["infrastructure"]["result"] == "FailedBeforeTest"
++    assert result["tests"]["api"]["result"] == "FailedBeforeTest"
+
+
+ def test_residue_verification_preserves_cleanup_not_attempted(tmp_path):
+@@ -137,7 +223,7 @@ def test_terraform_fmt_failure_before_apply_records_completed_cleanup(tmp_path):
+     checksum = write_build_artifact(build_dir, version)
+     original_run_command = environment_lifecycle.run_command
+
+-    def fake_run_command(args, *, cwd, log_path, append=False, check=False):
++    def fake_run_command(args, *, cwd, log_path, append=False, check=False, env=None):
+         command = " ".join(args)
+         if args[:2] == ["docker", "build"]:
+             result = environment_lifecycle.CommandResult(args, 0, "image built\n")
+@@ -224,8 +310,160 @@ def test_terraform_fmt_failure_before_apply_records_completed_cleanup(tmp_path):
+     assert result["cleanup"]["environment_resources_may_exist"] is False
+     assert result["cleanup"]["cleanup_attempted"] is True
+     assert manifest["environment_creation_state"] == "Failed"
++    assert manifest["infrastructure_test_execution_state"] == "Skipped"
++    assert manifest["infrastructure_test_result"] == "FailedBeforeTest"
++    assert manifest["api_test_execution_state"] == "Skipped"
++    assert manifest["api_test_result"] == "FailedBeforeTest"
+     assert manifest["cleanup_state"] == "Completed"
+     assert manifest["cleanup_target_count"] == 0
+     assert manifest["remaining_resource_count"] == 0
+     assert manifest["residue_verification_result"] == "Passed"
+     assert manifest["cleanup_warning"] is False
++    assert result["tests"]["infrastructure"]["result"] == "FailedBeforeTest"
++    assert result["tests"]["api"]["result"] == "FailedBeforeTest"
++
++
++def test_successful_lifecycle_records_formal_test_results(tmp_path):
++    output_dir = tmp_path / "evidence"
++    build_dir = tmp_path / "build-artifact"
++    github_output = tmp_path / "github-output.txt"
++    version = "v0.0.0+b.1.a.1"
++    checksum = write_build_artifact(build_dir, version)
++    original_run_command = environment_lifecycle.run_command
++    original_urlopen = environment_lifecycle.urlopen
++
++    class FakeResponse:
++        status = 200
++
++        def __enter__(self):
++            return self
++
++        def __exit__(self, exc_type, exc, traceback):
++            return False
++
++        def read(self):
++            return json.dumps({"status": "ok", "version": version}).encode("utf-8")
++
++    def fake_urlopen(url, timeout):
++        return FakeResponse()
++
++    def fake_run_command(args, *, cwd, log_path, append=False, check=False, env=None):
++        command = " ".join(args)
++        if args[:2] == ["docker", "build"]:
++            result = environment_lifecycle.CommandResult(args, 0, "image built\n")
++        elif args[:2] == ["terraform", "output"]:
++            output_name = args[-1]
++            outputs = {
++                "ansible_inventory": "all:\n  hosts:\n    ms1_target:\n",
++                "container_name": "ut-7-target",
++                "network_name": "ut-7-net",
++                "host_http_url": "http://127.0.0.1:18080",
++            }
++            result = environment_lifecycle.CommandResult(args, 0, outputs[output_name])
++        elif len(args) >= 3 and args[0] == environment_lifecycle.sys.executable and args[1:3] == ["-m", "pytest"]:
++            junit_path = Path(args[args.index("--junitxml") + 1])
++            junit_path.parent.mkdir(parents=True, exist_ok=True)
++            junit_path.write_text(
++                "<?xml version='1.0' encoding='utf-8'?><testsuite tests='1' failures='0' errors='0' skipped='0'><testcase classname='fake' name='passes' /></testsuite>",
++                encoding="utf-8",
++            )
++            result = environment_lifecycle.CommandResult(args, 0, "1 passed\n")
++        else:
++            result = environment_lifecycle.CommandResult(args, 0, "")
++
++        message = f"$ {command}\n{result.stdout}"
++        if append:
++            environment_lifecycle.append_log(log_path, message)
++        else:
++            environment_lifecycle.write_log(log_path, message)
++        return result
++
++    environment_lifecycle.run_command = fake_run_command
++    environment_lifecycle.urlopen = fake_urlopen
++    try:
++        rc = environment_lifecycle.main(
++            [
++                "--output-dir",
++                str(output_dir),
++                "--build-artifact-dir",
++                str(build_dir),
++                "--repository",
++                "RanamicusTechnology/11-env-hands-on",
++                "--workflow-run-id",
++                "28729279045",
++                "--workflow-run-attempt",
++                "1",
++                "--test-run-id",
++                "TR-UT-ISSUE-7-28729279045-A1",
++                "--issue-number",
++                "7",
++                "--target-version",
++                "0.0.0",
++                "--required-final-stage",
++                "UT",
++                "--pr-number",
++                "8",
++                "--pr-head-sha",
++                "6780c750712f373187be0654642548eb6e93f841",
++                "--governance-job-result",
++                "success",
++                "--governance-result",
++                "success",
++                "--static-analysis-job-result",
++                "success",
++                "--static-analysis-result",
++                "success",
++                "--unit-test-job-result",
++                "success",
++                "--unit-test-result",
++                "success",
++                "--build-package-job-result",
++                "success",
++                "--build-package-result",
++                "success",
++                "--build-artifact-name",
++                "build-go-app_TR-UT-ISSUE-7-28729279045-A1",
++                "--build-artifact-id",
++                "8088230457",
++                "--build-artifact-version",
++                version,
++                "--build-artifact-checksum",
++                checksum,
++                "--build-artifact-uploaded",
++                "true",
++                "--github-output",
++                str(github_output),
++                "--created-at",
++                "2026-07-05T00:00:00Z",
++            ]
++        )
++    finally:
++        environment_lifecycle.run_command = original_run_command
++        environment_lifecycle.urlopen = original_urlopen
++
++    assert rc == 0
++    manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
++    result = json.loads(
++        (output_dir / "environment-lifecycle-result.json").read_text(encoding="utf-8")
++    )
++    assert result["environment_lifecycle_result"] == "success"
++    assert manifest["test_result"] == "Passed"
++    assert manifest["infrastructure_test_execution_state"] == "Completed"
++    assert manifest["infrastructure_test_result"] == "Passed"
++    assert manifest["api_test_execution_state"] == "Completed"
++    assert manifest["api_test_result"] == "Passed"
++    assert manifest["missing_evidence"] == []
++    assert manifest["missing_evidence_count"] == 0
++    assert manifest["environment_evidence_complete"] is True
++    assert result["evidence"]["missing_evidence_count"] == 0
++    assert result["evidence"]["environment_evidence_complete"] is True
++    assert result["tests"]["infrastructure"]["result_files"] == [
++        "test-results/infrastructure-test-junit.xml",
++        "test-results/infrastructure-test-result.json",
++        "summaries/infrastructure-test-summary.md",
++    ]
++    assert "logs/infrastructure-test.log" in manifest["collected_evidence"]
++    assert "test-results/api-test-junit.xml" in manifest["collected_evidence"]
++    outputs = github_output.read_text(encoding="utf-8")
++    assert "missing_evidence_count=0" in outputs
++    assert "environment_evidence_complete=true" in outputs
+diff --git a/tests/pr-ci/test_pr_ci_gate.py b/tests/pr-ci/test_pr_ci_gate.py
+index 7f2b317cac8e25c617b30f1843e2ce54694ff827..e6183767fa579fca48f8fd9072cadfcad8b17831 100644
+--- a/tests/pr-ci/test_pr_ci_gate.py
++++ b/tests/pr-ci/test_pr_ci_gate.py
+@@ -50,7 +50,14 @@ def success_env():
+         "ENVIRONMENT_LIFECYCLE_RESULT": "success",
+         "ENVIRONMENT_EVIDENCE_MANIFEST_FINALIZED": "true",
+         "ENVIRONMENT_TEST_RESULT": "Passed",
++        "INFRASTRUCTURE_TEST_EXECUTION_STATE": "Completed",
++        "INFRASTRUCTURE_TEST_RESULT": "Passed",
++        "API_TEST_EXECUTION_STATE": "Completed",
++        "API_TEST_RESULT": "Passed",
+         "CLEANUP_STATE": "Completed",
++        "REMAINING_RESOURCE_COUNT": "0",
++        "MISSING_EVIDENCE_COUNT": "0",
++        "ENVIRONMENT_EVIDENCE_COMPLETE": "true",
+         "ENVIRONMENT_EVIDENCE_ARTIFACT_UPLOADED": "true",
+         "ENVIRONMENT_EVIDENCE_ARTIFACT_NAME": "evidence-environment_TR-UT-ISSUE-7-100-A1",
+         "ENVIRONMENT_EVIDENCE_ARTIFACT_ID": "6",
+@@ -92,3 +99,76 @@ def test_gate_allows_cleanup_warning_state():
+     result = pr_ci_gate.evaluate_gate(env)
+
+     assert result["gate_result"] == "success"
++
++
++def test_gate_fails_when_infrastructure_test_failed():
++    env = success_env()
++    env["INFRASTRUCTURE_TEST_RESULT"] = "Failed"
++
++    result = pr_ci_gate.evaluate_gate(env)
++
++    assert result["gate_result"] == "failure"
++    assert any("infrastructure_test_result is Failed" in reason for reason in result["failure_reasons"])
++
++
++def test_gate_fails_when_api_test_was_skipped():
++    env = success_env()
++    env["API_TEST_EXECUTION_STATE"] = "Skipped"
++    env["API_TEST_RESULT"] = "Skipped"
++
++    result = pr_ci_gate.evaluate_gate(env)
++
++    assert result["gate_result"] == "failure"
++    assert any("api_test_result is Skipped" in reason for reason in result["failure_reasons"])
++
++
++def test_gate_fails_when_resources_remain_after_cleanup():
++    env = success_env()
++    env["REMAINING_RESOURCE_COUNT"] = "1"
++
++    result = pr_ci_gate.evaluate_gate(env)
++
++    assert result["gate_result"] == "failure"
++    assert any("remaining_resource_count is 1" in reason for reason in result["failure_reasons"])
++
++
++def test_gate_fails_when_environment_evidence_is_missing():
++    env = success_env()
++    env["MISSING_EVIDENCE_COUNT"] = "1"
++    env["ENVIRONMENT_EVIDENCE_COMPLETE"] = "false"
++
++    result = pr_ci_gate.evaluate_gate(env)
++
++    assert result["gate_result"] == "failure"
++    assert any("missing_evidence_count is 1" in reason for reason in result["failure_reasons"])
++    assert any("environment evidence is not complete" in reason for reason in result["failure_reasons"])
++
++
++def test_gate_fails_when_missing_evidence_count_output_is_missing():
++    env = success_env()
++    del env["MISSING_EVIDENCE_COUNT"]
++
++    result = pr_ci_gate.evaluate_gate(env)
++
++    assert result["gate_result"] == "failure"
++    assert any("required value missing_evidence_count is missing" in reason for reason in result["failure_reasons"])
++
++
++def test_gate_fails_when_missing_evidence_count_is_not_integer():
++    env = success_env()
++    env["MISSING_EVIDENCE_COUNT"] = "not-an-integer"
++
++    result = pr_ci_gate.evaluate_gate(env)
++
++    assert result["gate_result"] == "failure"
++    assert any("missing_evidence_count is not an integer" in reason for reason in result["failure_reasons"])
++
++
++def test_gate_fails_when_environment_evidence_complete_is_false():
++    env = success_env()
++    env["ENVIRONMENT_EVIDENCE_COMPLETE"] = "false"
++
++    result = pr_ci_gate.evaluate_gate(env)
++
++    assert result["gate_result"] == "failure"
++    assert any("environment evidence is not complete" in reason for reason in result["failure_reasons"])
+diff --git a/tests/testcases/README.md b/tests/testcases/README.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ea24cb8491a77f3b9dd1fd4de3ff9fd59c3c727d
+--- /dev/null
++++ b/tests/testcases/README.md
+@@ -0,0 +1,14 @@
++<!--
++Copyright 2026 Ranamicus Technology LLC. All rights reserved.
++-->
++
++# 正式テスト観点
++
++5.5で接続する正式テストは、次の責務を分けて確認する。
++
++| 種別 | 主な確認対象 |
++| --- | --- |
++| インフラテスト | container/network label、Nginx設定、Goアプリbinary、process、port、Nginx経由health |
++| APIテスト | `/health`のstatusとbody、Build Artifact version、未対応method、未定義path |
++
++Goアプリ単体テスト、UT環境上の最小起動・疎通確認、正式インフラテスト、正式APIテストを同じテストとして扱わない。
