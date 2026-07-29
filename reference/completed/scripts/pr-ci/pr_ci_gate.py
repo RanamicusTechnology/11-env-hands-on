@@ -11,6 +11,9 @@ from typing import Any
 from pr_ci_common import append_step_summary
 
 
+MISSING_FAILURE_VALUE = "(missing)"
+
+
 def env_value(name: str, env: dict[str, str]) -> str:
     return env.get(name, "").strip()
 
@@ -24,14 +27,18 @@ def require_value(reasons: list[str], label: str, value: str) -> None:
         reasons.append(f"required value {label} is missing")
 
 
+def failure_value(value: str) -> str:
+    return value or MISSING_FAILURE_VALUE
+
+
 def require_success_job(reasons: list[str], job_name: str, result: str) -> None:
     if result != "success":
-        reasons.append(f"{job_name} job result is {result or '<missing>'}")
+        reasons.append(f"{job_name} job result is {failure_value(result)}")
 
 
 def require_logical_success(reasons: list[str], label: str, result: str) -> None:
     if result != "success":
-        reasons.append(f"{label} is {result or '<missing>'}")
+        reasons.append(f"{label} is {failure_value(result)}")
 
 
 def require_uploaded_artifact(
@@ -122,7 +129,7 @@ def evaluate_gate(env: dict[str, str]) -> dict[str, Any]:
 
     environment_result = env_value("ENVIRONMENT_LIFECYCLE_RESULT", env)
     if environment_result != "success":
-        reasons.append(f"environment_lifecycle_result is {environment_result or '<missing>'}")
+        reasons.append(f"environment_lifecycle_result is {failure_value(environment_result)}")
 
     if not is_true(env_value("ENVIRONMENT_EVIDENCE_MANIFEST_FINALIZED", env)):
         reasons.append("environment evidence manifest was not finalized")
@@ -136,32 +143,34 @@ def evaluate_gate(env: dict[str, str]) -> dict[str, Any]:
 
     cleanup_state = env_value("CLEANUP_STATE", env)
     if cleanup_state not in ("Completed", "CompletedWithWarning"):
-        reasons.append(f"cleanup_state is {cleanup_state or '<missing>'}")
+        reasons.append(f"cleanup_state is {failure_value(cleanup_state)}")
     if cleanup_state == "NotAttempted":
         reasons.append("cleanup_state NotAttempted is not an acceptable cleanup warning")
 
     test_result = env_value("ENVIRONMENT_TEST_RESULT", env)
     if test_result != "Passed":
-        reasons.append(f"environment test_result is {test_result or '<missing>'}")
+        reasons.append(f"environment test_result is {failure_value(test_result)}")
 
     infrastructure_execution_state = env_value("INFRASTRUCTURE_TEST_EXECUTION_STATE", env)
     if infrastructure_execution_state != "Completed":
         reasons.append(
             "infrastructure_test_execution_state is "
-            f"{infrastructure_execution_state or '<missing>'}"
+            f"{failure_value(infrastructure_execution_state)}"
         )
 
     infrastructure_result = env_value("INFRASTRUCTURE_TEST_RESULT", env)
     if infrastructure_result != "Passed":
-        reasons.append(f"infrastructure_test_result is {infrastructure_result or '<missing>'}")
+        reasons.append(
+            f"infrastructure_test_result is {failure_value(infrastructure_result)}"
+        )
 
     api_execution_state = env_value("API_TEST_EXECUTION_STATE", env)
     if api_execution_state != "Completed":
-        reasons.append(f"api_test_execution_state is {api_execution_state or '<missing>'}")
+        reasons.append(f"api_test_execution_state is {failure_value(api_execution_state)}")
 
     api_result = env_value("API_TEST_RESULT", env)
     if api_result != "Passed":
-        reasons.append(f"api_test_result is {api_result or '<missing>'}")
+        reasons.append(f"api_test_result is {failure_value(api_result)}")
 
     require_int_value(
         reasons,

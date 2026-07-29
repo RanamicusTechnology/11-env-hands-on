@@ -62,7 +62,7 @@ jobs:
           name: ${{ steps.governance.outputs.evidence_artifact_name || format('evidence-governance_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
           path: ${{ runner.temp }}/pr-ci-governance/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
   static-analysis:
     name: static-analysis
@@ -114,7 +114,7 @@ jobs:
           name: ${{ steps.static-analysis.outputs.evidence_artifact_name || format('evidence-static-analysis_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
           path: ${{ runner.temp }}/pr-ci-static-analysis/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Enforce static-analysis result
         if: always()
@@ -188,7 +188,7 @@ jobs:
           name: ${{ steps.unit-test.outputs.evidence_artifact_name || format('evidence-unit-test_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
           path: ${{ runner.temp }}/pr-ci-unit-test/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Enforce unit-test result
         if: always()
@@ -266,7 +266,7 @@ jobs:
           name: ${{ steps.build-package.outputs.build_artifact_name }}
           path: ${{ runner.temp }}/pr-ci-build-artifact/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Upload build-package evidence
         id: upload-build-package-evidence
@@ -277,7 +277,7 @@ jobs:
           name: ${{ steps.build-package.outputs.evidence_artifact_name || format('evidence-build-package_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
           path: ${{ runner.temp }}/pr-ci-build-package-evidence/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Enforce build-package result
         if: always()
@@ -415,7 +415,7 @@ jobs:
           name: ${{ steps.environment-lifecycle.outputs.evidence_artifact_name || format('evidence-environment_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
           path: ${{ runner.temp }}/pr-ci-environment-evidence/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Enforce environment lifecycle result
         if: always()

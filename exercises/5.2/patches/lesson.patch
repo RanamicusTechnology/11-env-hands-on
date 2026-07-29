@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/pr-ci.yml b/.github/workflows/pr-ci.yml
-index d88ea1a395342c4c101880f7598a2bb096cab298..efde6f17b9319384eeae26bf63fac0e6872523b7 100644
+index d88ea1a395342c4c101880f7598a2bb096cab298..a299e361f08aad0114301f79e25d5183c3789569 100644
 --- a/.github/workflows/pr-ci.yml
 +++ b/.github/workflows/pr-ci.yml
 @@ -1,20 +1,161 @@
@@ -73,7 +73,7 @@ index d88ea1a395342c4c101880f7598a2bb096cab298..efde6f17b9319384eeae26bf63fac0e6
 +          name: ${{ steps.governance.outputs.evidence_artifact_name || format('evidence-governance_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
 +          path: ${{ runner.temp }}/pr-ci-governance/
 +          if-no-files-found: error
-+          retention-days: 7
++          retention-days: 30
 +
 +  pr-ci-gate:
 +    name: pr-ci-gate
@@ -173,7 +173,7 @@ index d88ea1a395342c4c101880f7598a2bb096cab298..efde6f17b9319384eeae26bf63fac0e6
 +          fi
 diff --git a/scripts/pr-ci/governance_check.py b/scripts/pr-ci/governance_check.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..89e3c85b7f2d2420995c6ee58baa9a36e7432f28
+index 0000000000000000000000000000000000000000..a32125aa6e6617bf91115f31eb5c311c5dc77616
 --- /dev/null
 +++ b/scripts/pr-ci/governance_check.py
 @@ -0,0 +1,354 @@
@@ -533,7 +533,7 @@ index 0000000000000000000000000000000000000000..89e3c85b7f2d2420995c6ee58baa9a36
 +    sys.exit(main(sys.argv[1:]))
 diff --git a/tests/pr-ci/test_governance_check.py b/tests/pr-ci/test_governance_check.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..5f947c247c08ff720ab52fbf2e1b8ded1bedf6cf
+index 0000000000000000000000000000000000000000..3c26ebdebcf14a15e7b84397b0a2a656dcd664df
 --- /dev/null
 +++ b/tests/pr-ci/test_governance_check.py
 @@ -0,0 +1,175 @@

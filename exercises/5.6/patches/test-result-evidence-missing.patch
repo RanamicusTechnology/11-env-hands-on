@@ -7,7 +7,10 @@ diff --git a/VERSION b/VERSION
 diff --git a/scripts/pr-ci/environment_lifecycle.py b/scripts/pr-ci/environment_lifecycle.py
 --- a/scripts/pr-ci/environment_lifecycle.py
 +++ b/scripts/pr-ci/environment_lifecycle.py
-@@ -764,0 +765,7 @@
+@@ -762,4 +762,11 @@ def run_pytest_suite(
+         summary_path=summary_path,
+         failure_reasons=failure_reasons,
+     )
 +    if test_key == "api":
 +        missing_reason = "Lesson 5.6 evidence-missing scenario removed API test summary after generation."
 +        summary_file = output_dir / summary_path
@@ -15,3 +18,4 @@ diff --git a/scripts/pr-ci/environment_lifecycle.py b/scripts/pr-ci/environment_
 +            summary_file.unlink()
 +        record_missing_evidence(state, summary_path, missing_reason)
 +
+     return execution_state, test_result

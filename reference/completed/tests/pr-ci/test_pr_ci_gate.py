@@ -172,3 +172,25 @@ def test_gate_fails_when_environment_evidence_complete_is_false():
 
     assert result["gate_result"] == "failure"
     assert any("environment evidence is not complete" in reason for reason in result["failure_reasons"])
+
+
+def test_gate_failure_reason_uses_visible_missing_marker():
+    env = success_env()
+    del env["API_TEST_RESULT"]
+
+    result = pr_ci_gate.evaluate_gate(env)
+
+    assert "api_test_result is (missing)" in result["failure_reasons"]
+    assert all("<missing>" not in reason for reason in result["failure_reasons"])
+
+
+def test_gate_summary_does_not_hide_missing_values_in_markdown():
+    env = success_env()
+    del env["API_TEST_RESULT"]
+    result = pr_ci_gate.evaluate_gate(env)
+
+    summary = pr_ci_gate.build_summary(env, result)
+    failure_section = summary.split("## Gate failure reasons", 1)[1]
+
+    assert "- api_test_result is (missing)" in failure_section
+    assert "<missing>" not in failure_section

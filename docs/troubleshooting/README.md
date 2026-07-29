@@ -16,7 +16,7 @@ Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 - JUnit XMLとJob Summaryの見方
 - 証跡Artifactとevidence manifestの確認
 - 証跡資源のTest run ID／workflow run ID確認
-- Actions Artifactのupload時点からの`retention-days: 7`確認
+- Actions Artifactのupload時点からの`retention-days: 30`確認
 - strict Required status checkでbranchが最新mainを取り込んでいない場合の確認
 - Ruleset enforcement Active、空のBypass list、管理者bypassなしの確認
 - VERSIONガバナンスチェック失敗時の確認先
@@ -30,7 +30,7 @@ Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 - 5.6の期待失敗step不一致の確認
 - 5.6 patch適用後の差分確認
 
-Promotion Candidate Record、Promotion Record、Draft Release、Release Candidate登録、GHCR pushは、セクション5の受講者向けPR CIでは扱わない。
+Promotion Candidate Record、Promotion Record、Draft Release、Release Candidate登録、GHCR pushは、セクション5のPR CIでは扱わない。
 
 ## 段階patchを適用できない
 
@@ -42,7 +42,7 @@ Promotion Candidate Record、Promotion Record、Draft Release、Release Candidat
 4. `bash scripts/exercises/apply-learning-stage.sh --check <stage>`で適用可否を再確認する
 5. 先のstageを飛ばしていないか、同じstageを二重適用していないか確認する
 
-commit前の適用を戻す場合は、`git apply -R exercises/<stage>/patches/lesson.patch`を使用する。完成版を丸ごと上書きせず、`reference/completed/`から問題のある個別ファイルだけを比較する。5.6の`apply-failure-scenario.sh`は5.5完成後の異常系演習用であり、通常stageの復旧には使用しない。
+commit前の適用を戻す場合だけ、`git apply -R exercises/<stage>/patches/lesson.patch`を使用する。これは通常のNext stepsではなくRecoveryである。完成版を丸ごと上書きせず、`reference/completed/`から問題のある個別ファイルだけを比較する。5.6の`apply-failure-scenario.sh`は5.5完成後の異常系演習用であり、通常stageの復旧には使用しない。
 
 ## Issue入力不足
 
@@ -208,7 +208,7 @@ APIテスト失敗時も、cleanupと残存確認が実行され、environment e
 scriptの確認順は次のとおり。
 
 1. `bash scripts/exercises/apply-failure-scenario.sh --list`でscenario IDを確認する
-2. `bash scripts/exercises/apply-failure-scenario.sh --dry-run <scenario-id>`でpatch適用可否を確認する
+2. `bash scripts/exercises/apply-failure-scenario.sh --dry-run <scenario-id>`でpatch適用可否を確認する。`--check`は互換aliasとして使用できる
 3. `bash scripts/exercises/apply-failure-scenario.sh <scenario-id>`でpatchを適用する
 4. `git diff`で`VERSION`更新と意図した不備だけが入っていることを確認する
 
@@ -224,7 +224,19 @@ scriptの確認順は次のとおり。
 
 `pr-ci-gate` failure時は、個別jobが失敗しているのか、正式テスト結果が不合格なのか、証跡Artifact uploadやmanifest完全性が不備なのかを分けて読む。`pr-ci-gate`は再テストを実行せず、先行job結果、必須output、Artifact upload、正式テスト結果、cleanup state、残存0件、証跡完全性を集約するだけである。
 
-演習用PRは、修正後に`pr-ci-gate`がsuccessになってもmainへmergeしない。演習完了コメントをIssueへ残し、Pull RequestとIssueを手動closeする。
+### 5.6 復旧後のVERSION不一致
+
+復旧時はscenario patch全体を戻さず、`recovery_method`に従って注入した不備だけを修正する。patch全体を戻すと`VERSION`も`0.0.0`へ戻るため、標準の復旧手順には使用しない。
+
+次の3つがすべて`0.0.1`で一致することを確認する。
+
+1. scenario専用Issueの`target_version`
+2. scenario Pull Requestの`target_version`
+3. リポジトリルートの`VERSION`
+
+`VERSION`が`0.0.0`へ戻っていた場合は`0.0.1`へ直し、scenarioで注入した不備以外の差分がないことを`git diff`で確認してからcommit、pushする。
+
+演習用PRは、修正後に`pr-ci-gate`がsuccessになってもmainへmergeしない。演習完了コメントをIssueへ残し、Pull RequestとIssueを手動closeする。最後にremoteとlocalのscenario branchを削除し、次のscenarioは正常なmainから開始する。
 
 ## 残存リソースがある
 
@@ -244,10 +256,10 @@ cleanup対象外のDocker資源を削除していないこと、管理対象labe
 
 scenarioごとに変更Issueを作成しているか確認する。Issue本文には`background`、`change_summary`、`acceptance_criteria`、`affected_resources`、scenario定義の`target_version`、`required_final_stage: UT`が必要である。
 
-branch名にIssue番号が含まれ、Pull Request本文に`Closes #<Issue番号>`があるか確認する。修正後に`pr-ci-gate`が成功しても教材演習用Pull Requestはmainへmergeせずcloseし、対応Issueへ演習完了コメントを追加して手動closeする。
+branch名にIssue番号が含まれ、Pull Request本文に`Closes #<Issue番号>`があるか確認する。修正後に`pr-ci-gate`が成功しても教材演習用Pull Requestはmainへmergeせずcloseし、対応Issueへ演習完了コメントを追加して手動closeする。Pull RequestとIssueのclose後にscenario branchを削除する。
 
 scenario定義では`expected_failure_job`と`expected_failure_step`を分ける。必須scenarioでは、`static-analysis-failure`は`static-analysis/app-lint`、`unit-test-failure`は`unit-test/go-unit-test`、`infrastructure-test-failure`は`environment-lifecycle/infrastructure-test`、`api-test-failure`は`environment-lifecycle/api-test`、`test-result-evidence-missing`は`pr-ci-gate/evidence-completeness`で確認する。期待と異なるstepが先に失敗している場合は、patch内容または前提条件の不備として確認する。
 
 ## 注意
 
-本書はPR CI、Artifact、environment evidence、品質ゲート、5.6異常系演習の確認入口である。Promotion / Release系の処理はセクション5の受講者向けPR CIでは扱わない。
+本書はPR CI、Artifact、environment evidence、品質ゲート、5.6異常系演習の確認入口である。Promotion / Release系の処理はセクション5のPR CIでは扱わない。

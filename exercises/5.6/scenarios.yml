@@ -12,7 +12,6 @@ scenarios:
   - id: static-analysis-failure
     title: "Go静的解析失敗"
     purpose: "gofmt違反をPR CIの早い段階で検出し、pr-ci-gateがmerge不可にすることを確認する。"
-    contract_scenario: app_lint_failure
     patch: exercises/5.6/patches/static-analysis-failure.patch
     expected_failure_job: static-analysis
     expected_failure_step: app-lint
@@ -28,13 +27,12 @@ scenarios:
       - "evidence-static-analysis_<test-run-id>/logs/gofmt.log"
       - "evidence-environment_<test-run-id>/manifest.json"
       - "pr-ci-gate Summary"
-    recovery_method: "git apply --unidiff-zero -Rでpatchを戻す、またはapp/health.goをgofmtで整形する。"
+    recovery_method: "app/health.goへgofmtを実行して整形する。VERSIONは0.0.1を維持する。"
     merge_policy: "復旧後にpr-ci-gate successを確認しても、演習用PRはmainへmergeせずcloseする。"
 
   - id: unit-test-failure
     title: "Goアプリ単体テスト失敗"
     purpose: "runner上のGoアプリ単体テスト失敗をJUnit XMLとログから追跡できることを確認する。"
-    contract_scenario: go_unit_failure
     patch: exercises/5.6/patches/unit-test-failure.patch
     expected_failure_job: unit-test
     expected_failure_step: go-unit-test
@@ -50,13 +48,12 @@ scenarios:
       - "evidence-unit-test_<test-run-id>/unit-test-result.json"
       - "evidence-environment_<test-run-id>/manifest.json"
       - "pr-ci-gate Summary"
-    recovery_method: "git apply --unidiff-zero -Rでpatchを戻す、またはapp/health_test.goの期待値を実装と一致させる。"
+    recovery_method: "app/health_test.goのService期待値をms1-go-apiへ戻す。VERSIONは0.0.1を維持する。"
     merge_policy: "復旧後にpr-ci-gate successを確認しても、演習用PRはmainへmergeせずcloseする。"
 
   - id: infrastructure-test-failure
     title: "正式インフラテスト失敗"
     purpose: "environment-lifecycle内のTestinfraが、環境構成の不備を検出することを確認する。"
-    contract_scenario: infra_test_failure
     patch: exercises/5.6/patches/infrastructure-test-failure.patch
     expected_failure_job: environment-lifecycle
     expected_failure_step: infrastructure-test
@@ -72,13 +69,12 @@ scenarios:
       - "evidence-environment_<test-run-id>/test-results/infrastructure-test-result.json"
       - "evidence-environment_<test-run-id>/summaries/infrastructure-test-summary.md"
       - "evidence-environment_<test-run-id>/manifest.json"
-    recovery_method: "git apply --unidiff-zero -Rでpatchを戻す、またはNginx site enableをsymlink方式へ戻す。"
+    recovery_method: "Nginx site enableのstateをlinkへ戻す。VERSIONは0.0.1を維持する。"
     merge_policy: "復旧後にpr-ci-gate successを確認しても、演習用PRはmainへmergeせずcloseする。"
 
   - id: api-test-failure
     title: "正式APIテスト失敗"
     purpose: "正式インフラテストは成功した状態で、API仕様不整合を正式APIテストが検出することを確認する。"
-    contract_scenario: api_test_failure
     patch: exercises/5.6/patches/api-test-failure.patch
     expected_failure_job: environment-lifecycle
     expected_failure_step: api-test
@@ -94,13 +90,12 @@ scenarios:
       - "evidence-environment_<test-run-id>/test-results/api-test-result.json"
       - "evidence-environment_<test-run-id>/summaries/api-test-summary.md"
       - "evidence-environment_<test-run-id>/manifest.json"
-    recovery_method: "git apply --unidiff-zero -Rでpatchを戻す、または誤った/not-found routeを削除する。"
+    recovery_method: "Goの誤った/not-found routeとNginxの/not-found locationを削除する。VERSIONは0.0.1を維持する。"
     merge_policy: "復旧後にpr-ci-gate successを確認しても、演習用PRはmainへmergeせずcloseする。"
 
   - id: test-result-evidence-missing
     title: "正式テスト証跡欠落"
     purpose: "正式テストが合格しても、environment evidenceの必須証跡欠落をmissing_evidence_countとenvironment_evidence_completeで検出できることを確認する。"
-    contract_scenario: test_result_evidence_missing
     patch: exercises/5.6/patches/test-result-evidence-missing.patch
     expected_failure_job: pr-ci-gate
     expected_failure_step: evidence-completeness
@@ -117,5 +112,5 @@ scenarios:
       - "evidence-environment_<test-run-id>/test-results/api-test-result.json"
       - "pr-ci-gate Summary"
       - "欠落対象ファイルの有無"
-    recovery_method: "git apply --unidiff-zero -Rでpatchを戻す、または削除されたAPI test summaryを生成・保存する処理を復旧する。"
+    recovery_method: "API test summaryを削除するscenario専用処理だけを除去する。VERSIONは0.0.1を維持する。"
     merge_policy: "復旧後にpr-ci-gate successを確認しても、演習用PRはmainへmergeせずcloseする。"
