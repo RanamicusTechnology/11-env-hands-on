@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/pr-ci.yml b/.github/workflows/pr-ci.yml
-index 748369498c29bd92395ad919ea0a2106cc589c7b..0055eb191cd8e4265502aa8a02f9240de0ae4b6f 100644
+index 37d6722626b4f1ff44c1e9785a09a8a3e941c53c..49d3889c3d62aaafd0a8460c3f82a2a21ca8d127 100644
 --- a/.github/workflows/pr-ci.yml
 +++ b/.github/workflows/pr-ci.yml
 @@ -305,6 +305,137 @@ jobs:
@@ -110,7 +110,7 @@ index 748369498c29bd92395ad919ea0a2106cc589c7b..0055eb191cd8e4265502aa8a02f9240d
 +          name: ${{ steps.environment-lifecycle.outputs.evidence_artifact_name || format('evidence-environment_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
 +          path: ${{ runner.temp }}/pr-ci-environment-evidence/
 +          if-no-files-found: error
-+          retention-days: 7
++          retention-days: 30
 +
 +      - name: Enforce environment lifecycle result
 +        if: always()
@@ -327,7 +327,7 @@ index 748369498c29bd92395ad919ea0a2106cc589c7b..0055eb191cd8e4265502aa8a02f9240d
 +            --github-step-summary "${GITHUB_STEP_SUMMARY}"
 diff --git a/ansible/deploy/roles/app/tasks/main.yml b/ansible/deploy/roles/app/tasks/main.yml
 new file mode 100644
-index 0000000000000000000000000000000000000000..0f528b230d3ecbd9081a5c4b1409a9e79ee3b115
+index 0000000000000000000000000000000000000000..a9d510cbe2719028b6aa794979bc82df676d298e
 --- /dev/null
 +++ b/ansible/deploy/roles/app/tasks/main.yml
 @@ -0,0 +1,131 @@
@@ -475,7 +475,7 @@ index 0000000000000000000000000000000000000000..1cbc23487aa0a430ddd75216590f72d3
 +exec /opt/ms1-app/bin/ms1-app
 diff --git a/ansible/deploy/site.yml b/ansible/deploy/site.yml
 new file mode 100644
-index 0000000000000000000000000000000000000000..a5f25cf96afb6958227d42cb65f2fc5e03e17c12
+index 0000000000000000000000000000000000000000..c4f8ddca67dfe0b6da376d04536815e0f4436991
 --- /dev/null
 +++ b/ansible/deploy/site.yml
 @@ -0,0 +1,8 @@
@@ -574,7 +574,7 @@ index 0000000000000000000000000000000000000000..5e146297976745fb057a4450dc17b869
 +}
 diff --git a/ansible/infra/site.yml b/ansible/infra/site.yml
 new file mode 100644
-index 0000000000000000000000000000000000000000..58a903ad03c2839eed92081a05f9304ae7b7dc25
+index 0000000000000000000000000000000000000000..0d622da242e1c00073e4dc0406f67c21c8fcea4f
 --- /dev/null
 +++ b/ansible/infra/site.yml
 @@ -0,0 +1,8 @@
@@ -588,7 +588,7 @@ index 0000000000000000000000000000000000000000..58a903ad03c2839eed92081a05f9304a
 +    - role: nginx
 diff --git a/images/target/Dockerfile b/images/target/Dockerfile
 new file mode 100644
-index 0000000000000000000000000000000000000000..d68170ba4ae720c09375d2a20b6d4a8f1f3ab414
+index 0000000000000000000000000000000000000000..aa5250e07909b436bed1958a804f2ce0fe6d6ef8
 --- /dev/null
 +++ b/images/target/Dockerfile
 @@ -0,0 +1,25 @@
@@ -633,7 +633,7 @@ index 0000000000000000000000000000000000000000..825c8e10aa8256e47230a43b1a38908b
 +requests==2.32.4
 diff --git a/scripts/pr-ci/environment_lifecycle.py b/scripts/pr-ci/environment_lifecycle.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..be9f8d626e1dd3b9e59c8c38f43cbabd6cbb8ffc
+index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374e2fd0514
 --- /dev/null
 +++ b/scripts/pr-ci/environment_lifecycle.py
 @@ -0,0 +1,903 @@
@@ -1542,7 +1542,7 @@ index 0000000000000000000000000000000000000000..be9f8d626e1dd3b9e59c8c38f43cbabd
 +    sys.exit(main(sys.argv[1:]))
 diff --git a/scripts/pr-ci/pr_ci_gate.py b/scripts/pr-ci/pr_ci_gate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..5f6503be91b42b8c39215fd8ec1464afcc71c2a1
+index 0000000000000000000000000000000000000000..9229e787c8642b48af8c8aa3ee0bb80ff3dd9d4b
 --- /dev/null
 +++ b/scripts/pr-ci/pr_ci_gate.py
 @@ -0,0 +1,211 @@
@@ -1816,7 +1816,7 @@ index 0000000000000000000000000000000000000000..c66d53c5f52dd594e4573d139563742d
 +}
 diff --git a/terraform/environments/ut/outputs.tf b/terraform/environments/ut/outputs.tf
 new file mode 100644
-index 0000000000000000000000000000000000000000..ba7bf8674a5248166bfaa3e46472401b19c4dd94
+index 0000000000000000000000000000000000000000..c23368416249f50c5dd81826f366e91f77d666eb
 --- /dev/null
 +++ b/terraform/environments/ut/outputs.tf
 @@ -0,0 +1,38 @@

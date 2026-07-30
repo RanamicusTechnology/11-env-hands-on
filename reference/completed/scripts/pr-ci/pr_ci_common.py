@@ -143,7 +143,7 @@ def common_evidence_manifest(
         "required_final_stage": required_final_stage,
         "generated_timestamp": generated_timestamp,
         "artifact_name": artifact_name,
-        "retention_days": 7,
+        "retention_days": 30,
         "expected_evidence": expected_evidence,
         "collected_evidence": collected_evidence,
         "missing_evidence": missing_evidence,

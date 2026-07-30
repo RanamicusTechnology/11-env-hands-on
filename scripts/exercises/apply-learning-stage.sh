@@ -112,5 +112,11 @@ fi
 
 printf 'Applied learning stage: %s\n' "$stage"
 printf 'Patch: %s\n' "$patch_path"
-printf 'Next: inspect git diff, run the lesson checks, and commit this stage before applying the next stage.\n'
-printf 'Reverse before commit with: git apply -R %s\n' "$patch_path"
+printf '\n'
+printf 'Next steps:\n'
+printf '  1. Inspect git status and git diff.\n'
+printf '  2. Run the lesson checks.\n'
+printf '  3. Commit and push before the next stage.\n'
+printf '\n'
+printf 'Recovery before commit:\n'
+printf '  git apply -R %s\n' "$patch_path"

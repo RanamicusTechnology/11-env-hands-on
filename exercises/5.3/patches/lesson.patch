@@ -1,10 +1,10 @@
 diff --git a/.github/workflows/pr-ci.yml b/.github/workflows/pr-ci.yml
-index efde6f17b9319384eeae26bf63fac0e6872523b7..748369498c29bd92395ad919ea0a2106cc589c7b 100644
+index a299e361f08aad0114301f79e25d5183c3789569..37d6722626b4f1ff44c1e9785a09a8a3e941c53c 100644
 --- a/.github/workflows/pr-ci.yml
 +++ b/.github/workflows/pr-ci.yml
 @@ -64,25 +64,289 @@ jobs:
            if-no-files-found: error
-           retention-days: 7
+           retention-days: 30
 
 +  static-analysis:
 +    name: static-analysis
@@ -56,7 +56,7 @@ index efde6f17b9319384eeae26bf63fac0e6872523b7..748369498c29bd92395ad919ea0a2106
 +          name: ${{ steps.static-analysis.outputs.evidence_artifact_name || format('evidence-static-analysis_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
 +          path: ${{ runner.temp }}/pr-ci-static-analysis/
 +          if-no-files-found: error
-+          retention-days: 7
++          retention-days: 30
 +
 +      - name: Enforce static-analysis result
 +        if: always()
@@ -130,7 +130,7 @@ index efde6f17b9319384eeae26bf63fac0e6872523b7..748369498c29bd92395ad919ea0a2106
 +          name: ${{ steps.unit-test.outputs.evidence_artifact_name || format('evidence-unit-test_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
 +          path: ${{ runner.temp }}/pr-ci-unit-test/
 +          if-no-files-found: error
-+          retention-days: 7
++          retention-days: 30
 +
 +      - name: Enforce unit-test result
 +        if: always()
@@ -208,7 +208,7 @@ index efde6f17b9319384eeae26bf63fac0e6872523b7..748369498c29bd92395ad919ea0a2106
 +          name: ${{ steps.build-package.outputs.build_artifact_name }}
 +          path: ${{ runner.temp }}/pr-ci-build-artifact/
 +          if-no-files-found: error
-+          retention-days: 7
++          retention-days: 30
 +
 +      - name: Upload build-package evidence
 +        id: upload-build-package-evidence
@@ -219,7 +219,7 @@ index efde6f17b9319384eeae26bf63fac0e6872523b7..748369498c29bd92395ad919ea0a2106
 +          name: ${{ steps.build-package.outputs.evidence_artifact_name || format('evidence-build-package_missing-{0}-A{1}', github.run_id, github.run_attempt) }}
 +          path: ${{ runner.temp }}/pr-ci-build-package-evidence/
 +          if-no-files-found: error
-+          retention-days: 7
++          retention-days: 30
 +
 +      - name: Enforce build-package result
 +        if: always()
@@ -500,7 +500,7 @@ index 0000000000000000000000000000000000000000..218753ad4da4519d6e93dab90f6da847
 +}
 diff --git a/scripts/pr-ci/build_package.py b/scripts/pr-ci/build_package.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..e0c4a18531fd5014d522bfce2d9c877033915411
+index 0000000000000000000000000000000000000000..f294698b3a487df647fad71787b8eb2f30bcdfc7
 --- /dev/null
 +++ b/scripts/pr-ci/build_package.py
 @@ -0,0 +1,299 @@
@@ -805,7 +805,7 @@ index 0000000000000000000000000000000000000000..e0c4a18531fd5014d522bfce2d9c8770
 +    sys.exit(main(sys.argv[1:]))
 diff --git a/scripts/pr-ci/pr_ci_common.py b/scripts/pr-ci/pr_ci_common.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..aec3a141b430b20e7ece8f61d4b7cd370b1f2614
+index 0000000000000000000000000000000000000000..3116de15e0592a9c2f7b006fc2280ce0dd9a6b58
 --- /dev/null
 +++ b/scripts/pr-ci/pr_ci_common.py
 @@ -0,0 +1,161 @@
@@ -954,7 +954,7 @@ index 0000000000000000000000000000000000000000..aec3a141b430b20e7ece8f61d4b7cd37
 +        "required_final_stage": required_final_stage,
 +        "generated_timestamp": generated_timestamp,
 +        "artifact_name": artifact_name,
-+        "retention_days": 7,
++        "retention_days": 30,
 +        "expected_evidence": expected_evidence,
 +        "collected_evidence": collected_evidence,
 +        "missing_evidence": missing_evidence,
@@ -972,7 +972,7 @@ index 0000000000000000000000000000000000000000..aec3a141b430b20e7ece8f61d4b7cd37
 +    return env
 diff --git a/scripts/pr-ci/static_analysis.py b/scripts/pr-ci/static_analysis.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..7490939129eb4e459779484783f64c954bed0a65
+index 0000000000000000000000000000000000000000..651054d25abb72442982a5a054d3884bed8e5f45
 --- /dev/null
 +++ b/scripts/pr-ci/static_analysis.py
 @@ -0,0 +1,183 @@
@@ -1161,7 +1161,7 @@ index 0000000000000000000000000000000000000000..7490939129eb4e459779484783f64c95
 +    sys.exit(main(sys.argv[1:]))
 diff --git a/scripts/pr-ci/unit_test.py b/scripts/pr-ci/unit_test.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..7028572c1350f567e8c4773741ee18725f66f8be
+index 0000000000000000000000000000000000000000..9f8c9b676f1c90cd11b6f619eaf87b93b7a8164a
 --- /dev/null
 +++ b/scripts/pr-ci/unit_test.py
 @@ -0,0 +1,160 @@

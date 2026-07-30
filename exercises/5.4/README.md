@@ -15,7 +15,7 @@ git diff --check
 git diff
 ```
 
-Terraform Docker Provider、Ubuntu 24.04 target container、Ansible、最小起動・疎通確認、cleanup前ログ退避、destroy、残存確認、environment evidenceが接続される。正式インフラテストと正式APIテストはまだ接続されない。
+Terraform Docker Provider、Ubuntu 24.04 target container、Ansible、起動・疎通確認（readiness check）、cleanup前ログ退避、destroy、残存確認、environment evidenceが接続される。readiness checkは正式テスト開始の前提確認であり、正式インフラテストと正式APIテストはまだ接続されない。
 
 上流失敗時にも`environment-lifecycle`が起動し、cleanup target 0、残存0件、`cleanup_state: Completed`を記録することを確認する。次の5.5へ進む前に、このstageをcommitする。
 
