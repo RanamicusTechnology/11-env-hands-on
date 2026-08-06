@@ -470,7 +470,7 @@ index 0000000000000000000000000000000000000000..a32125aa6e6617bf91115f31eb5c311c
 +
 +
 +def parse_args(argv: list[str]) -> argparse.Namespace:
-+    parser = argparse.ArgumentParser(description="Run Lesson 5.2 PR CI governance checks.")
++    parser = argparse.ArgumentParser(description="Run the Lesson 5.2 PR CI governance checks.")
 +    parser.add_argument("--event-path", required=True)
 +    parser.add_argument("--output-dir", required=True)
 +    parser.add_argument("--repository", required=True)

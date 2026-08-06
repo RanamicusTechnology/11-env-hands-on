@@ -1,8 +1,8 @@
 diff --git a/.github/workflows/pr-ci.yml b/.github/workflows/pr-ci.yml
-index 37d6722626b4f1ff44c1e9785a09a8a3e941c53c..49d3889c3d62aaafd0a8460c3f82a2a21ca8d127 100644
+index 37d6722626b4f1ff44c1e9785a09a8a3e941c53c..f6cf226bf56edb6ca37c72e525ad4018234a4824 100644
 --- a/.github/workflows/pr-ci.yml
 +++ b/.github/workflows/pr-ci.yml
-@@ -305,6 +305,137 @@ jobs:
+@@ -305,6 +305,141 @@ jobs:
              exit 1
            fi
 
@@ -21,8 +21,12 @@ index 37d6722626b4f1ff44c1e9785a09a8a3e941c53c..49d3889c3d62aaafd0a8460c3f82a2a2
 +      environment_evidence_manifest_finalized: ${{ steps.environment-lifecycle.outputs.environment_evidence_manifest_finalized }}
 +      environment_face_id: ${{ steps.environment-lifecycle.outputs.environment_face_id }}
 +      environment_creation_state: ${{ steps.environment-lifecycle.outputs.environment_creation_state }}
++      readiness_check_execution_state: ${{ steps.environment-lifecycle.outputs.readiness_check_execution_state }}
++      readiness_check_result: ${{ steps.environment-lifecycle.outputs.readiness_check_result }}
 +      test_execution_state: ${{ steps.environment-lifecycle.outputs.test_execution_state }}
++      overall_test_result: ${{ steps.environment-lifecycle.outputs.overall_test_result }}
 +      test_result: ${{ steps.environment-lifecycle.outputs.test_result }}
++      test_result_alias_of: ${{ steps.environment-lifecycle.outputs.test_result_alias_of }}
 +      cleanup_state: ${{ steps.environment-lifecycle.outputs.cleanup_state }}
 +      cleanup_warning: ${{ steps.environment-lifecycle.outputs.cleanup_warning }}
 +      cleanup_target_count: ${{ steps.environment-lifecycle.outputs.cleanup_target_count }}
@@ -140,7 +144,7 @@ index 37d6722626b4f1ff44c1e9785a09a8a3e941c53c..49d3889c3d62aaafd0a8460c3f82a2a2
    pr-ci-gate:
      name: pr-ci-gate
      runs-on: ubuntu-latest
-@@ -314,19 +445,32 @@ jobs:
+@@ -314,19 +449,34 @@ jobs:
        - static-analysis
        - unit-test
        - build-package
@@ -166,14 +170,16 @@ index 37d6722626b4f1ff44c1e9785a09a8a3e941c53c..49d3889c3d62aaafd0a8460c3f82a2a2
 +          ENVIRONMENT_LIFECYCLE_RESULT: ${{ needs.environment-lifecycle.outputs.environment_lifecycle_result }}
 +          ENVIRONMENT_EVIDENCE_MANIFEST_FINALIZED: ${{ needs.environment-lifecycle.outputs.environment_evidence_manifest_finalized }}
 +          ENVIRONMENT_CREATION_STATE: ${{ needs.environment-lifecycle.outputs.environment_creation_state }}
-+          ENVIRONMENT_TEST_RESULT: ${{ needs.environment-lifecycle.outputs.test_result }}
++          READINESS_CHECK_EXECUTION_STATE: ${{ needs.environment-lifecycle.outputs.readiness_check_execution_state }}
++          READINESS_CHECK_RESULT: ${{ needs.environment-lifecycle.outputs.readiness_check_result }}
++          OVERALL_TEST_RESULT: ${{ needs.environment-lifecycle.outputs.overall_test_result }}
 +          CLEANUP_STATE: ${{ needs.environment-lifecycle.outputs.cleanup_state }}
 +          CLEANUP_WARNING: ${{ needs.environment-lifecycle.outputs.cleanup_warning }}
 +          REMAINING_RESOURCE_COUNT: ${{ needs.environment-lifecycle.outputs.remaining_resource_count }}
            ISSUE_NUMBER: ${{ needs.governance-check.outputs.issue_number }}
            TARGET_VERSION: ${{ needs.governance-check.outputs.target_version }}
            REQUIRED_FINAL_STAGE: ${{ needs.governance-check.outputs.required_final_stage }}
-@@ -347,6 +491,9 @@ jobs:
+@@ -347,6 +497,9 @@ jobs:
            BUILD_ARTIFACT_ID: ${{ needs.build-package.outputs.build_artifact_id }}
            BUILD_ARTIFACT_VERSION: ${{ needs.build-package.outputs.build_artifact_version }}
            BUILD_ARTIFACT_CHECKSUM: ${{ needs.build-package.outputs.build_artifact_checksum }}
@@ -183,7 +189,7 @@ index 37d6722626b4f1ff44c1e9785a09a8a3e941c53c..49d3889c3d62aaafd0a8460c3f82a2a2
            PR_NUMBER: ${{ github.event.pull_request.number }}
            PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
            PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-@@ -354,139 +501,5 @@ jobs:
+@@ -354,139 +507,5 @@ jobs:
            WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
          run: |
            set -Eeuo pipefail
@@ -633,10 +639,10 @@ index 0000000000000000000000000000000000000000..825c8e10aa8256e47230a43b1a38908b
 +requests==2.32.4
 diff --git a/scripts/pr-ci/environment_lifecycle.py b/scripts/pr-ci/environment_lifecycle.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374e2fd0514
+index 0000000000000000000000000000000000000000..8f88fb8a740835aac472c1e2acbf26e210375714
 --- /dev/null
 +++ b/scripts/pr-ci/environment_lifecycle.py
-@@ -0,0 +1,903 @@
+@@ -0,0 +1,950 @@
 +#!/usr/bin/env python3
 +# Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 +
@@ -706,8 +712,10 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +    artifact_ready: bool = False
 +    environment_face_id: str = ""
 +    environment_creation_state: str = "NotStarted"
++    readiness_check_execution_state: str = "NotStarted"
++    readiness_check_result: str = "FailedBeforeCheck"
 +    test_execution_state: str = "NotStarted"
-+    test_result: str = "FailedBeforeTest"
++    overall_test_result: str = "FailedBeforeTest"
 +    cleanup_state: str = "NotAttempted"
 +    cleanup_warning: bool = False
 +    cleanup_target_count: int = 0
@@ -768,6 +776,14 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +
 +def environment_face_id(issue_number: str, workflow_run_id: str, run_attempt: str) -> str:
 +    return f"UT-{issue_number}-{workflow_run_id}-A{run_attempt}"
++
++
++def derive_overall_test_result(state: LifecycleState) -> str:
++    if state.readiness_check_result == "Passed":
++        return "Passed"
++    if state.readiness_check_result == "FailedBeforeCheck":
++        return "FailedBeforeTest"
++    return "Failed"
 +
 +
 +def sha256_file(path: Path) -> str:
@@ -949,6 +965,7 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +    label_filter: str,
 +) -> dict[str, str]:
 +    tf_dir = root / "terraform" / "environments" / "ut"
++    state.environment_creation_state = "InProgress"
 +    fmt = run_command(["terraform", "fmt", "-check"], cwd=tf_dir, log_path=logs_dir / "terraform-plan.log", append=True)
 +    if fmt.returncode != 0:
 +        state.failure_reasons.append("terraform fmt -check failed")
@@ -1007,7 +1024,6 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +        state.environment_creation_state = "Failed"
 +        return {}
 +
-+    state.environment_creation_state = "Completed"
 +    outputs: dict[str, str] = {}
 +    for name in ("ansible_inventory", "container_name", "network_name", "host_http_url"):
 +        result = run_command(["terraform", "output", "-raw", name], cwd=tf_dir, log_path=logs_dir / "terraform-apply.log", append=True)
@@ -1038,8 +1054,11 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +    inventory = output_dir / "inventory.yml"
 +    if not inventory.exists():
 +        state.failure_reasons.append("Ansible inventory was not created")
-+        state.test_execution_state = "NotStarted"
-+        state.test_result = "FailedBeforeTest"
++        state.environment_creation_state = "Failed"
++        state.readiness_check_execution_state = "Skipped"
++        state.readiness_check_result = "FailedBeforeCheck"
++        state.test_execution_state = "Failed"
++        state.overall_test_result = derive_overall_test_result(state)
 +        return
 +
 +    ansible_log = logs_dir / "ansible.log"
@@ -1051,8 +1070,11 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +    )
 +    if infra.returncode != 0:
 +        state.failure_reasons.append("Ansible infra configuration failed")
++        state.environment_creation_state = "Failed"
++        state.readiness_check_execution_state = "Skipped"
++        state.readiness_check_result = "FailedBeforeCheck"
 +        state.test_execution_state = "Failed"
-+        state.test_result = "Failed"
++        state.overall_test_result = derive_overall_test_result(state)
 +        return
 +
 +    binary_path = Path(args.build_artifact_dir) / "go-app-linux-amd64"
@@ -1073,15 +1095,23 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +    )
 +    if deploy.returncode != 0:
 +        state.failure_reasons.append("Ansible app deploy failed")
++        state.environment_creation_state = "Failed"
++        state.readiness_check_execution_state = "Skipped"
++        state.readiness_check_result = "FailedBeforeCheck"
 +        state.test_execution_state = "Failed"
-+        state.test_result = "Failed"
++        state.overall_test_result = derive_overall_test_result(state)
 +        return
++
++    state.environment_creation_state = "Completed"
++    state.readiness_check_execution_state = "InProgress"
 +
 +    container_name = outputs.get("container_name", "")
 +    if not container_name:
 +        state.failure_reasons.append("container_name output is missing")
++        state.readiness_check_execution_state = "Failed"
++        state.readiness_check_result = "Failed"
 +        state.test_execution_state = "Failed"
-+        state.test_result = "Failed"
++        state.overall_test_result = derive_overall_test_result(state)
 +        return
 +
 +    check_log = logs_dir / "startup-connectivity-check.log"
@@ -1154,8 +1184,10 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +            state.failure_reasons.append("host nginx health request failed")
 +            failed = True
 +
-+    state.test_execution_state = "Failed" if failed else "Completed"
-+    state.test_result = "Failed" if failed else "Passed"
++    state.readiness_check_execution_state = "Failed" if failed else "Completed"
++    state.readiness_check_result = "Failed" if failed else "Passed"
++    state.test_execution_state = state.readiness_check_execution_state
++    state.overall_test_result = derive_overall_test_result(state)
 +
 +
 +def collect_logs(root: Path, logs_dir: Path, container_name: str) -> None:
@@ -1335,11 +1367,13 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +            f"| Issue | `{manifest['issue_number_or_UNLINKED']}` |",
 +            f"| Environment face ID | `{manifest['environment_face_id_or_not_created']}` |",
 +            f"| Environment creation state | `{manifest['environment_creation_state']}` |",
-+            f"| Test execution state | `{manifest['test_execution_state']}` |",
-+            f"| Test result | `{manifest['test_result']}` |",
++            f"| Readiness check | `{manifest['readiness_check_execution_state']} / {manifest['readiness_check_result']}` |",
++            f"| Overall test result | `{manifest['overall_test_result']}` |",
 +            f"| Cleanup state | `{manifest['cleanup_state']}` |",
-+            f"| Cleanup target count | `{manifest['cleanup_target_count']}` |",
 +            f"| Remaining resource count | `{manifest['remaining_resource_count']}` |",
++            f"| Environment lifecycle result | `{result_payload['environment_lifecycle_result']}` |",
++            f"| Test execution state (compatibility) | `{manifest['test_execution_state']}` |",
++            f"| Cleanup target count | `{manifest['cleanup_target_count']}` |",
 +            f"| Cleanup warning | `{str(manifest['cleanup_warning']).lower()}` |",
 +            f"| Evidence Artifact | `{manifest['artifact_name']}` |",
 +            "",
@@ -1364,7 +1398,7 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +        state.environment_lifecycle_result = "failure"
 +    elif not state.upstream_ready:
 +        state.environment_lifecycle_result = "skipped_prerequisites"
-+    elif state.test_result == "Passed":
++    elif state.overall_test_result == "Passed":
 +        state.environment_lifecycle_result = "success"
 +    else:
 +        state.environment_lifecycle_result = "failure"
@@ -1395,8 +1429,12 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +        {
 +            "environment_face_id_or_not_created": state.environment_face_id or "NOT_CREATED",
 +            "environment_creation_state": state.environment_creation_state,
++            "readiness_check_execution_state": state.readiness_check_execution_state,
++            "readiness_check_result": state.readiness_check_result,
 +            "test_execution_state": state.test_execution_state,
-+            "test_result": state.test_result,
++            "overall_test_result": state.overall_test_result,
++            "test_result": state.overall_test_result,
++            "test_result_alias_of": "overall_test_result",
 +            "cleanup_state": state.cleanup_state,
 +            "cleanup_target_count": state.cleanup_target_count,
 +            "remaining_resource_count": state.remaining_resource_count,
@@ -1425,8 +1463,12 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +        "environment": {
 +            "environment_face_id": state.environment_face_id,
 +            "environment_creation_state": state.environment_creation_state,
++            "readiness_check_execution_state": state.readiness_check_execution_state,
++            "readiness_check_result": state.readiness_check_result,
 +            "test_execution_state": state.test_execution_state,
-+            "test_result": state.test_result,
++            "overall_test_result": state.overall_test_result,
++            "test_result": state.overall_test_result,
++            "test_result_alias_of": "overall_test_result",
 +        },
 +        "cleanup": {
 +            "cleanup_state": state.cleanup_state,
@@ -1478,7 +1520,9 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +            if build_image.returncode != 0:
 +                state.failure_reasons.append("target image build failed")
 +                state.environment_creation_state = "Failed"
-+                state.test_result = "FailedBeforeTest"
++                state.readiness_check_execution_state = "Skipped"
++                state.readiness_check_result = "FailedBeforeCheck"
++                state.overall_test_result = derive_overall_test_result(state)
 +            else:
 +                outputs = run_terraform_apply(
 +                    args,
@@ -1490,7 +1534,7 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +                    label_filter=label_filter,
 +                )
 +
-+            if state.environment_creation_state == "Completed":
++            if state.environment_creation_state == "InProgress":
 +                run_ansible_and_checks(
 +                    args,
 +                    state,
@@ -1510,6 +1554,11 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +        verify_residue(state, root=root, logs_dir=logs_dir, label_filter=label_filter)
 +        ensure_placeholder_logs(logs_dir)
 +
++    if state.readiness_check_execution_state == "NotStarted":
++        state.readiness_check_execution_state = "Skipped"
++        state.readiness_check_result = "FailedBeforeCheck"
++    state.overall_test_result = derive_overall_test_result(state)
++
 +    manifest, result_payload, summary = finalize_result(args, state, output_dir)
 +    write_json(output_dir / "manifest.json", manifest)
 +    write_json(output_dir / "environment-lifecycle-result.json", result_payload)
@@ -1523,8 +1572,12 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +            "evidence_artifact_name": manifest["artifact_name"],
 +            "environment_face_id": state.environment_face_id,
 +            "environment_creation_state": state.environment_creation_state,
++            "readiness_check_execution_state": state.readiness_check_execution_state,
++            "readiness_check_result": state.readiness_check_result,
 +            "test_execution_state": state.test_execution_state,
-+            "test_result": state.test_result,
++            "overall_test_result": state.overall_test_result,
++            "test_result": state.overall_test_result,
++            "test_result_alias_of": "overall_test_result",
 +            "cleanup_state": state.cleanup_state,
 +            "cleanup_warning": state.cleanup_warning,
 +            "cleanup_target_count": state.cleanup_target_count,
@@ -1542,10 +1595,10 @@ index 0000000000000000000000000000000000000000..70626dfdb8e04cd18fcaedbaf0560374
 +    sys.exit(main(sys.argv[1:]))
 diff --git a/scripts/pr-ci/pr_ci_gate.py b/scripts/pr-ci/pr_ci_gate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..9229e787c8642b48af8c8aa3ee0bb80ff3dd9d4b
+index 0000000000000000000000000000000000000000..9bade749f1ef49b9e3942a086dd1fcf5fe408a0d
 --- /dev/null
 +++ b/scripts/pr-ci/pr_ci_gate.py
-@@ -0,0 +1,211 @@
+@@ -0,0 +1,240 @@
 +#!/usr/bin/env python3
 +# Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 +
@@ -1669,15 +1722,37 @@ index 0000000000000000000000000000000000000000..9229e787c8642b48af8c8aa3ee0bb80f
 +        env_value("ENVIRONMENT_EVIDENCE_ARTIFACT_ID", env),
 +    )
 +
++    environment_creation_state = env_value("ENVIRONMENT_CREATION_STATE", env)
++    if environment_creation_state != "Completed":
++        reasons.append(
++            "environment_creation_state is "
++            f"{environment_creation_state or '<missing>'}"
++        )
++
++    readiness_execution_state = env_value("READINESS_CHECK_EXECUTION_STATE", env)
++    if readiness_execution_state != "Completed":
++        reasons.append(
++            "readiness_check_execution_state is "
++            f"{readiness_execution_state or '<missing>'}"
++        )
++
++    readiness_result = env_value("READINESS_CHECK_RESULT", env)
++    if readiness_result != "Passed":
++        reasons.append(
++            f"readiness_check_result is {readiness_result or '<missing>'}"
++        )
++
++    overall_test_result = env_value("OVERALL_TEST_RESULT", env)
++    if overall_test_result != "Passed":
++        reasons.append(
++            f"overall_test_result is {overall_test_result or '<missing>'}"
++        )
++
 +    cleanup_state = env_value("CLEANUP_STATE", env)
 +    if cleanup_state not in ("Completed", "CompletedWithWarning"):
 +        reasons.append(f"cleanup_state is {cleanup_state or '<missing>'}")
 +    if cleanup_state == "NotAttempted":
 +        reasons.append("cleanup_state NotAttempted is not an acceptable cleanup warning")
-+
-+    test_result = env_value("ENVIRONMENT_TEST_RESULT", env)
-+    if test_result != "Passed":
-+        reasons.append(f"environment test_result is {test_result or '<missing>'}")
 +
 +    gate_result = "success" if not reasons else "failure"
 +    return {
@@ -1705,12 +1780,19 @@ index 0000000000000000000000000000000000000000..9229e787c8642b48af8c8aa3ee0bb80f
 +        ("unit-test job result", env_value("UNIT_TEST_JOB_RESULT", env) or "<missing>"),
 +        ("build-package job result", env_value("BUILD_PACKAGE_JOB_RESULT", env) or "<missing>"),
 +        ("environment-lifecycle job result", env_value("ENVIRONMENT_LIFECYCLE_JOB_RESULT", env) or "<missing>"),
-+        ("Environment lifecycle result", env_value("ENVIRONMENT_LIFECYCLE_RESULT", env) or "<missing>"),
 +        ("Environment creation state", env_value("ENVIRONMENT_CREATION_STATE", env) or "<missing>"),
-+        ("Environment test result", env_value("ENVIRONMENT_TEST_RESULT", env) or "<missing>"),
++        (
++            "Readiness check",
++            (
++                f"{env_value('READINESS_CHECK_EXECUTION_STATE', env) or '<missing>'} / "
++                f"{env_value('READINESS_CHECK_RESULT', env) or '<missing>'}"
++            ),
++        ),
++        ("Overall test result", env_value("OVERALL_TEST_RESULT", env) or "<missing>"),
 +        ("Cleanup state", env_value("CLEANUP_STATE", env) or "<missing>"),
 +        ("Cleanup warning", env_value("CLEANUP_WARNING", env) or "<missing>"),
 +        ("Remaining resource count", env_value("REMAINING_RESOURCE_COUNT", env) or "<missing>"),
++        ("Environment lifecycle result", env_value("ENVIRONMENT_LIFECYCLE_RESULT", env) or "<missing>"),
 +        ("Build Artifact", env_value("BUILD_ARTIFACT_NAME", env) or "<missing>"),
 +        ("Build Artifact ID", env_value("BUILD_ARTIFACT_ID", env) or "<missing>"),
 +        ("Build Artifact version", env_value("BUILD_ARTIFACT_VERSION", env) or "<missing>"),
@@ -2172,10 +2254,10 @@ index 0000000000000000000000000000000000000000..e7b4596977cf79b3bc39a60d18c2c79e
 +    assert manifest["cleanup_warning"] is False
 diff --git a/tests/pr-ci/test_pr_ci_gate.py b/tests/pr-ci/test_pr_ci_gate.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..7f2b317cac8e25c617b30f1843e2ce54694ff827
+index 0000000000000000000000000000000000000000..13962fb0f4c8f42773075ab7a0028619d65eeda5
 --- /dev/null
 +++ b/tests/pr-ci/test_pr_ci_gate.py
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,109 @@
 +# Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 +
 +import importlib.util
@@ -2227,7 +2309,10 @@ index 0000000000000000000000000000000000000000..7f2b317cac8e25c617b30f1843e2ce54
 +        "BUILD_ARTIFACT_CHECKSUM": "abc",
 +        "ENVIRONMENT_LIFECYCLE_RESULT": "success",
 +        "ENVIRONMENT_EVIDENCE_MANIFEST_FINALIZED": "true",
-+        "ENVIRONMENT_TEST_RESULT": "Passed",
++        "ENVIRONMENT_CREATION_STATE": "Completed",
++        "READINESS_CHECK_EXECUTION_STATE": "Completed",
++        "READINESS_CHECK_RESULT": "Passed",
++        "OVERALL_TEST_RESULT": "Passed",
 +        "CLEANUP_STATE": "Completed",
 +        "ENVIRONMENT_EVIDENCE_ARTIFACT_UPLOADED": "true",
 +        "ENVIRONMENT_EVIDENCE_ARTIFACT_NAME": "evidence-environment_TR-UT-ISSUE-7-100-A1",
@@ -2260,6 +2345,18 @@ index 0000000000000000000000000000000000000000..7f2b317cac8e25c617b30f1843e2ce54
 +
 +    assert result["gate_result"] == "failure"
 +    assert any("environment-lifecycle job result is failure" in reason for reason in result["failure_reasons"])
++
++
++def test_gate_fails_when_readiness_check_failed():
++    env = success_env()
++    env["READINESS_CHECK_EXECUTION_STATE"] = "Failed"
++    env["READINESS_CHECK_RESULT"] = "Failed"
++    env["OVERALL_TEST_RESULT"] = "Failed"
++
++    result = pr_ci_gate.evaluate_gate(env)
++
++    assert result["gate_result"] == "failure"
++    assert any("readiness_check_result is Failed" in reason for reason in result["failure_reasons"])
 +
 +
 +def test_gate_allows_cleanup_warning_state():

@@ -92,52 +92,61 @@ def assert_expected_labels(labels):
         assert labels.get(key) == value
 
 
-def test_nginx_is_installed(host):
+def test_nginx_is_installed(host, record_property):
+    record_property("test_case_id", "INF-001")
     assert host.package("nginx").is_installed
 
 
-def test_target_container_exists_and_has_expected_labels():
+def test_target_container_exists_and_has_expected_labels(record_property):
+    record_property("test_case_id", "INF-002")
     container = docker_inspect("container", env_or_file("TARGET_CONTAINER_NAME", "dist/ms1/container_name.txt"))
     assert container["State"]["Running"] is True
     assert_expected_labels(container["Config"]["Labels"])
 
 
-def test_target_network_exists_and_has_expected_labels():
+def test_target_network_exists_and_has_expected_labels(record_property):
+    record_property("test_case_id", "INF-003")
     network = docker_inspect("network", env_or_file("TARGET_NETWORK_NAME", "dist/ms1/network_name.txt"))
     assert_expected_labels(network["Labels"])
 
 
-def test_nginx_configuration_file_exists(host):
+def test_nginx_configuration_file_exists(host, record_property):
+    record_property("test_case_id", "INF-004")
     config = host.file("/etc/nginx/sites-enabled/ms1-app.conf")
     assert config.exists
     assert config.is_symlink
 
 
-def test_nginx_configuration_is_valid(host):
+def test_nginx_configuration_is_valid(host, record_property):
+    record_property("test_case_id", "INF-005")
     result = host.run("nginx -t")
     assert result.rc == 0, result.stderr
 
 
-def test_required_ports_are_listening(host):
+def test_required_ports_are_listening(host, record_property):
+    record_property("test_case_id", "INF-006")
     result = host.run("ss -ltn")
     assert result.rc == 0, result.stderr
     assert ":80 " in result.stdout
     assert ":8080 " in result.stdout
 
 
-def test_go_application_binary_exists(host):
+def test_go_application_binary_exists(host, record_property):
+    record_property("test_case_id", "INF-007")
     app = host.file("/opt/ms1-app/bin/ms1-app")
     assert app.exists
     assert app.is_file
     assert app.mode & 0o111
 
 
-def test_go_application_process_is_running(host):
+def test_go_application_process_is_running(host, record_property):
+    record_property("test_case_id", "INF-008")
     result = host.run("pgrep -af '/opt/ms1-app/bin/ms1-app'")
     assert result.rc == 0, result.stderr
 
 
-def test_nginx_proxies_to_go_application(host):
+def test_nginx_proxies_to_go_application(host, record_property):
+    record_property("test_case_id", "INF-009")
     expected_version = expected_app_version()
     result = host.run("python3 -c 'import json, urllib.request; print(json.dumps(json.load(urllib.request.urlopen(\"http://127.0.0.1/health\", timeout=5)), sort_keys=True))'")
     assert result.rc == 0, result.stderr

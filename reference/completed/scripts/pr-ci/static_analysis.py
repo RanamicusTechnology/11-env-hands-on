@@ -23,7 +23,11 @@ from pr_ci_common import (
 
 def classify_gofmt(returncode: int, stdout: str) -> tuple[str, list[str]]:
     reasons: list[str] = []
-    unformatted = [line.strip() for line in stdout.splitlines() if line.strip()]
+    unformatted = (
+        [line.strip() for line in stdout.splitlines() if line.strip()]
+        if returncode == 0
+        else []
+    )
     if returncode != 0:
         reasons.append(f"gofmt -l exited with rc={returncode}")
     if unformatted:
@@ -60,7 +64,6 @@ def build_summary(
             f"| Evidence Artifact | `{manifest['artifact_name']}` |",
             f"| gofmt | `{result_payload['checks']['gofmt']['result']}` |",
             f"| go vet | `{result_payload['checks']['go_vet']['result']}` |",
-            f"| iac-lint | `{result_payload['checks']['iac_lint']['result']}` |",
             "",
             "## Failure reasons",
             "",
@@ -101,6 +104,19 @@ def main(argv: list[str]) -> int:
 
     gofmt = run_command(["gofmt", "-l", "."], cwd=app_dir, log_path=logs_dir / "gofmt.log")
     gofmt_result, gofmt_reasons = classify_gofmt(gofmt["returncode"], gofmt["stdout"])
+    unformatted_files = (
+        [line.strip() for line in gofmt["stdout"].splitlines() if line.strip()]
+        if gofmt["returncode"] == 0
+        else []
+    )
+    gofmt_diff = None
+    if unformatted_files:
+        gofmt_diff = run_command(
+            ["gofmt", "-d", "."],
+            cwd=app_dir,
+            log_path=logs_dir / "gofmt.log",
+            append=True,
+        )
 
     go_vet = run_command(["go", "vet", "./..."], cwd=app_dir, log_path=logs_dir / "go-vet.log")
     go_vet_result, go_vet_reasons = classify_returncode("go vet ./...", go_vet["returncode"])
@@ -116,19 +132,14 @@ def main(argv: list[str]) -> int:
                 "result": gofmt_result,
                 "returncode": gofmt["returncode"],
                 "log_path": "logs/gofmt.log",
-                "unformatted_files": [
-                    line.strip() for line in gofmt["stdout"].splitlines() if line.strip()
-                ],
+                "unformatted_files": unformatted_files,
+                "diff_generated": gofmt_diff is not None,
+                "diff_returncode": gofmt_diff["returncode"] if gofmt_diff else None,
             },
             "go_vet": {
                 "result": go_vet_result,
                 "returncode": go_vet["returncode"],
                 "log_path": "logs/go-vet.log",
-            },
-            "iac_lint": {
-                "result": "planned_after_ms3",
-                "executed": False,
-                "reason": "Terraform/Ansible static analysis is out of scope for Lesson 5.3.",
             },
         },
     }
