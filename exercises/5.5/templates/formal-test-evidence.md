@@ -24,4 +24,4 @@ pr-ci-gate
 
 正式テストケースの詳細、automation function、前提、期待結果、skip条件は`tests/testcases/README.md`で確認する。正常なLesson 5.5のPR CIでは13件すべてを実行対象とし、`API-004`だけは`TARGET_CONTAINER_NAME`がない場合にskipする。
 
-5.4の起動・疎通確認は正式テスト開始前のreadiness checkであり、13件へ含めない。5.5でprocess、port、Nginx経由`/health`、versionを再確認するのは、受入・回帰証跡をcase単位で残すためである。テスト合格と証跡完全性は別々に確認する。
+5.4の起動・疎通確認は正式テスト開始前のreadiness checkであり、正式テストではない。5.5でprocess、port、Nginx経由`/health`、versionを再確認するのは、受入・回帰証跡をcase単位で残すためである。テスト合格と証跡完全性は別々に確認する。

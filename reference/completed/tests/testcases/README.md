@@ -34,4 +34,4 @@ API suiteには、`API_BASE_URL`と`EXPECTED_APP_VERSION`または`APP_VERSION`�
 
 ## 共通証跡
 
-正式テストのcase単位結果はJUnit XMLで確認し、suite全体の結果はJSON result、Markdown summary、logで確認する。`manifest.json`、`environment-lifecycle-result.json`、`pr-ci-gate` Job Summaryを併せて、証跡完全性とGate判定を追跡する。
+各自動化functionはpytestの`record_property`で表のIDをJUnit XMLの`test_case_id` propertyへ記録する。正式テストのcase単位結果はJUnit XMLで確認し、suite全体の結果はJSON result、Markdown summary、logで確認する。正常系ではINF-001～INF-009を各1回、API-001～API-004を各1回収集し、failed、errors、skipped、期待ID欠落、想定外ID、重複ID、property欠落を0件とする。`manifest.json`、`environment-lifecycle-result.json`、`pr-ci-gate` Job Summaryを併せて、証跡完全性とGate判定を追跡する。

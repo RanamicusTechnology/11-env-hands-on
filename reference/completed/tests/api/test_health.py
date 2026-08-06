@@ -31,7 +31,8 @@ def base_url():
     return os.environ["API_BASE_URL"].rstrip("/")
 
 
-def test_health_endpoint_via_nginx(base_url):
+def test_health_endpoint_via_nginx(base_url, record_property):
+    record_property("test_case_id", "API-001")
     expected_version = expected_app_version()
     response = requests.get(f"{base_url}/health", timeout=5)
 
@@ -44,19 +45,22 @@ def test_health_endpoint_via_nginx(base_url):
     assert payload["version"] == expected_version
 
 
-def test_health_endpoint_rejects_unsupported_method(base_url):
+def test_health_endpoint_rejects_unsupported_method(base_url, record_property):
+    record_property("test_case_id", "API-002")
     response = requests.post(f"{base_url}/health", timeout=5)
 
     assert response.status_code == 405
 
 
-def test_unknown_path_returns_not_found(base_url):
+def test_unknown_path_returns_not_found(base_url, record_property):
+    record_property("test_case_id", "API-003")
     response = requests.get(f"{base_url}/not-found", timeout=5)
 
     assert response.status_code == 404
 
 
-def test_direct_container_health_matches_nginx_when_container_is_available():
+def test_direct_container_health_matches_nginx_when_container_is_available(record_property):
+    record_property("test_case_id", "API-004")
     container_name = os.environ.get("TARGET_CONTAINER_NAME")
     if not container_name:
         pytest.skip("TARGET_CONTAINER_NAME is not available for direct container check.")

@@ -49,11 +49,14 @@ def success_env():
         "BUILD_ARTIFACT_CHECKSUM": "abc",
         "ENVIRONMENT_LIFECYCLE_RESULT": "success",
         "ENVIRONMENT_EVIDENCE_MANIFEST_FINALIZED": "true",
-        "ENVIRONMENT_TEST_RESULT": "Passed",
+        "ENVIRONMENT_CREATION_STATE": "Completed",
+        "READINESS_CHECK_EXECUTION_STATE": "Completed",
+        "READINESS_CHECK_RESULT": "Passed",
         "INFRASTRUCTURE_TEST_EXECUTION_STATE": "Completed",
         "INFRASTRUCTURE_TEST_RESULT": "Passed",
         "API_TEST_EXECUTION_STATE": "Completed",
         "API_TEST_RESULT": "Passed",
+        "OVERALL_TEST_RESULT": "Passed",
         "CLEANUP_STATE": "Completed",
         "REMAINING_RESOURCE_COUNT": "0",
         "MISSING_EVIDENCE_COUNT": "0",
@@ -91,6 +94,19 @@ def test_gate_fails_when_environment_lifecycle_job_failed():
     assert any("environment-lifecycle job result is failure" in reason for reason in result["failure_reasons"])
 
 
+def test_gate_fails_when_environment_creation_is_not_completed():
+    env = success_env()
+    env["ENVIRONMENT_CREATION_STATE"] = "Failed"
+
+    result = pr_ci_gate.evaluate_gate(env)
+
+    assert result["gate_result"] == "failure"
+    assert any(
+        "environment_creation_state is Failed" in reason
+        for reason in result["failure_reasons"]
+    )
+
+
 def test_gate_allows_cleanup_warning_state():
     env = success_env()
     env["CLEANUP_STATE"] = "CompletedWithWarning"
@@ -111,6 +127,24 @@ def test_gate_fails_when_infrastructure_test_failed():
     assert any("infrastructure_test_result is Failed" in reason for reason in result["failure_reasons"])
 
 
+def test_gate_fails_when_readiness_check_failed():
+    env = success_env()
+    env["READINESS_CHECK_EXECUTION_STATE"] = "Failed"
+    env["READINESS_CHECK_RESULT"] = "Failed"
+
+    result = pr_ci_gate.evaluate_gate(env)
+
+    assert result["gate_result"] == "failure"
+    assert any(
+        "readiness_check_execution_state is Failed" in reason
+        for reason in result["failure_reasons"]
+    )
+    assert any(
+        "readiness_check_result is Failed" in reason
+        for reason in result["failure_reasons"]
+    )
+
+
 def test_gate_fails_when_api_test_was_skipped():
     env = success_env()
     env["API_TEST_EXECUTION_STATE"] = "Skipped"
@@ -120,6 +154,19 @@ def test_gate_fails_when_api_test_was_skipped():
 
     assert result["gate_result"] == "failure"
     assert any("api_test_result is Skipped" in reason for reason in result["failure_reasons"])
+
+
+def test_gate_fails_when_overall_test_result_failed():
+    env = success_env()
+    env["OVERALL_TEST_RESULT"] = "Failed"
+
+    result = pr_ci_gate.evaluate_gate(env)
+
+    assert result["gate_result"] == "failure"
+    assert any(
+        "overall_test_result is Failed" in reason
+        for reason in result["failure_reasons"]
+    )
 
 
 def test_gate_fails_when_resources_remain_after_cleanup():

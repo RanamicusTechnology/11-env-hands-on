@@ -131,6 +131,13 @@ def evaluate_gate(env: dict[str, str]) -> dict[str, Any]:
     if environment_result != "success":
         reasons.append(f"environment_lifecycle_result is {failure_value(environment_result)}")
 
+    environment_creation_state = env_value("ENVIRONMENT_CREATION_STATE", env)
+    if environment_creation_state != "Completed":
+        reasons.append(
+            "environment_creation_state is "
+            f"{failure_value(environment_creation_state)}"
+        )
+
     if not is_true(env_value("ENVIRONMENT_EVIDENCE_MANIFEST_FINALIZED", env)):
         reasons.append("environment evidence manifest was not finalized")
     require_uploaded_artifact(
@@ -147,9 +154,16 @@ def evaluate_gate(env: dict[str, str]) -> dict[str, Any]:
     if cleanup_state == "NotAttempted":
         reasons.append("cleanup_state NotAttempted is not an acceptable cleanup warning")
 
-    test_result = env_value("ENVIRONMENT_TEST_RESULT", env)
-    if test_result != "Passed":
-        reasons.append(f"environment test_result is {failure_value(test_result)}")
+    readiness_execution_state = env_value("READINESS_CHECK_EXECUTION_STATE", env)
+    if readiness_execution_state != "Completed":
+        reasons.append(
+            "readiness_check_execution_state is "
+            f"{failure_value(readiness_execution_state)}"
+        )
+
+    readiness_result = env_value("READINESS_CHECK_RESULT", env)
+    if readiness_result != "Passed":
+        reasons.append(f"readiness_check_result is {failure_value(readiness_result)}")
 
     infrastructure_execution_state = env_value("INFRASTRUCTURE_TEST_EXECUTION_STATE", env)
     if infrastructure_execution_state != "Completed":
@@ -171,6 +185,12 @@ def evaluate_gate(env: dict[str, str]) -> dict[str, Any]:
     api_result = env_value("API_TEST_RESULT", env)
     if api_result != "Passed":
         reasons.append(f"api_test_result is {failure_value(api_result)}")
+
+    overall_test_result = env_value("OVERALL_TEST_RESULT", env)
+    if overall_test_result != "Passed":
+        reasons.append(
+            f"overall_test_result is {failure_value(overall_test_result)}"
+        )
 
     require_int_value(
         reasons,
@@ -213,9 +233,14 @@ def build_summary(env: dict[str, str], result: dict[str, Any]) -> str:
         ("unit-test job result", env_value("UNIT_TEST_JOB_RESULT", env) or "<missing>"),
         ("build-package job result", env_value("BUILD_PACKAGE_JOB_RESULT", env) or "<missing>"),
         ("environment-lifecycle job result", env_value("ENVIRONMENT_LIFECYCLE_JOB_RESULT", env) or "<missing>"),
-        ("Environment lifecycle result", env_value("ENVIRONMENT_LIFECYCLE_RESULT", env) or "<missing>"),
         ("Environment creation state", env_value("ENVIRONMENT_CREATION_STATE", env) or "<missing>"),
-        ("Environment test result", env_value("ENVIRONMENT_TEST_RESULT", env) or "<missing>"),
+        (
+            "Readiness check",
+            (
+                f"{env_value('READINESS_CHECK_EXECUTION_STATE', env) or '<missing>'} / "
+                f"{env_value('READINESS_CHECK_RESULT', env) or '<missing>'}"
+            ),
+        ),
         (
             "Infrastructure test",
             (
@@ -230,9 +255,11 @@ def build_summary(env: dict[str, str], result: dict[str, Any]) -> str:
                 f"{env_value('API_TEST_RESULT', env) or '<missing>'}"
             ),
         ),
+        ("Overall test result", env_value("OVERALL_TEST_RESULT", env) or "<missing>"),
         ("Cleanup state", env_value("CLEANUP_STATE", env) or "<missing>"),
         ("Cleanup warning", env_value("CLEANUP_WARNING", env) or "<missing>"),
         ("Remaining resource count", env_value("REMAINING_RESOURCE_COUNT", env) or "<missing>"),
+        ("Environment lifecycle result", env_value("ENVIRONMENT_LIFECYCLE_RESULT", env) or "<missing>"),
         ("Missing evidence count", env_value("MISSING_EVIDENCE_COUNT", env) or "<missing>"),
         ("Environment evidence complete", env_value("ENVIRONMENT_EVIDENCE_COMPLETE", env) or "<missing>"),
         ("Build Artifact", env_value("BUILD_ARTIFACT_NAME", env) or "<missing>"),

@@ -805,10 +805,10 @@ index 0000000000000000000000000000000000000000..f294698b3a487df647fad71787b8eb2f
 +    sys.exit(main(sys.argv[1:]))
 diff --git a/scripts/pr-ci/pr_ci_common.py b/scripts/pr-ci/pr_ci_common.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..3116de15e0592a9c2f7b006fc2280ce0dd9a6b58
+index 0000000000000000000000000000000000000000..706b2d73d8cc9f379d45a12852250a987d9f732f
 --- /dev/null
 +++ b/scripts/pr-ci/pr_ci_common.py
-@@ -0,0 +1,161 @@
+@@ -0,0 +1,167 @@
 +#!/usr/bin/env python3
 +# Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 +
@@ -869,6 +869,7 @@ index 0000000000000000000000000000000000000000..3116de15e0592a9c2f7b006fc2280ce0
 +    cwd: Path,
 +    log_path: Path,
 +    env: dict[str, str] | None = None,
++    append: bool = False,
 +) -> dict[str, Any]:
 +    log_path.parent.mkdir(parents=True, exist_ok=True)
 +    try:
@@ -886,7 +887,12 @@ index 0000000000000000000000000000000000000000..3116de15e0592a9c2f7b006fc2280ce0
 +    except OSError as exc:
 +        returncode = 127
 +        output = f"ERROR: failed to execute {args[0]}: {exc}\n"
-+    log_path.write_text(output, encoding="utf-8")
++    serialized = f"$ {' '.join(args)}\n{output}"
++    mode = "a" if append else "w"
++    with log_path.open(mode, encoding="utf-8") as log_file:
++        log_file.write(serialized)
++        if not serialized.endswith("\n"):
++            log_file.write("\n")
 +    return {
 +        "command": args,
 +        "returncode": returncode,
@@ -972,10 +978,10 @@ index 0000000000000000000000000000000000000000..3116de15e0592a9c2f7b006fc2280ce0
 +    return env
 diff --git a/scripts/pr-ci/static_analysis.py b/scripts/pr-ci/static_analysis.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..651054d25abb72442982a5a054d3884bed8e5f45
+index 0000000000000000000000000000000000000000..06a789abb944c9c7c5cde50a0bb798bc4b87a452
 --- /dev/null
 +++ b/scripts/pr-ci/static_analysis.py
-@@ -0,0 +1,183 @@
+@@ -0,0 +1,194 @@
 +#!/usr/bin/env python3
 +# Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 +
@@ -1001,7 +1007,11 @@ index 0000000000000000000000000000000000000000..651054d25abb72442982a5a054d3884b
 +
 +def classify_gofmt(returncode: int, stdout: str) -> tuple[str, list[str]]:
 +    reasons: list[str] = []
-+    unformatted = [line.strip() for line in stdout.splitlines() if line.strip()]
++    unformatted = (
++        [line.strip() for line in stdout.splitlines() if line.strip()]
++        if returncode == 0
++        else []
++    )
 +    if returncode != 0:
 +        reasons.append(f"gofmt -l exited with rc={returncode}")
 +    if unformatted:
@@ -1038,7 +1048,6 @@ index 0000000000000000000000000000000000000000..651054d25abb72442982a5a054d3884b
 +            f"| Evidence Artifact | `{manifest['artifact_name']}` |",
 +            f"| gofmt | `{result_payload['checks']['gofmt']['result']}` |",
 +            f"| go vet | `{result_payload['checks']['go_vet']['result']}` |",
-+            f"| iac-lint | `{result_payload['checks']['iac_lint']['result']}` |",
 +            "",
 +            "## Failure reasons",
 +            "",
@@ -1049,7 +1058,7 @@ index 0000000000000000000000000000000000000000..651054d25abb72442982a5a054d3884b
 +
 +
 +def parse_args(argv: list[str]) -> argparse.Namespace:
-+    parser = argparse.ArgumentParser(description="Run Lesson 5.3 Go app static analysis.")
++    parser = argparse.ArgumentParser(description="Run the Lesson 5.3 Go app static analysis.")
 +    parser.add_argument("--output-dir", required=True)
 +    parser.add_argument("--repository", required=True)
 +    parser.add_argument("--workflow-run-id", required=True)
@@ -1079,6 +1088,19 @@ index 0000000000000000000000000000000000000000..651054d25abb72442982a5a054d3884b
 +
 +    gofmt = run_command(["gofmt", "-l", "."], cwd=app_dir, log_path=logs_dir / "gofmt.log")
 +    gofmt_result, gofmt_reasons = classify_gofmt(gofmt["returncode"], gofmt["stdout"])
++    unformatted_files = (
++        [line.strip() for line in gofmt["stdout"].splitlines() if line.strip()]
++        if gofmt["returncode"] == 0
++        else []
++    )
++    gofmt_diff = None
++    if unformatted_files:
++        gofmt_diff = run_command(
++            ["gofmt", "-d", "."],
++            cwd=app_dir,
++            log_path=logs_dir / "gofmt.log",
++            append=True,
++        )
 +
 +    go_vet = run_command(["go", "vet", "./..."], cwd=app_dir, log_path=logs_dir / "go-vet.log")
 +    go_vet_result, go_vet_reasons = classify_returncode("go vet ./...", go_vet["returncode"])
@@ -1094,19 +1116,14 @@ index 0000000000000000000000000000000000000000..651054d25abb72442982a5a054d3884b
 +                "result": gofmt_result,
 +                "returncode": gofmt["returncode"],
 +                "log_path": "logs/gofmt.log",
-+                "unformatted_files": [
-+                    line.strip() for line in gofmt["stdout"].splitlines() if line.strip()
-+                ],
++                "unformatted_files": unformatted_files,
++                "diff_generated": gofmt_diff is not None,
++                "diff_returncode": gofmt_diff["returncode"] if gofmt_diff else None,
 +            },
 +            "go_vet": {
 +                "result": go_vet_result,
 +                "returncode": go_vet["returncode"],
 +                "log_path": "logs/go-vet.log",
-+            },
-+            "iac_lint": {
-+                "result": "planned_after_ms3",
-+                "executed": False,
-+                "reason": "Terraform/Ansible static analysis is out of scope for Lesson 5.3.",
 +            },
 +        },
 +    }
@@ -1161,7 +1178,7 @@ index 0000000000000000000000000000000000000000..651054d25abb72442982a5a054d3884b
 +    sys.exit(main(sys.argv[1:]))
 diff --git a/scripts/pr-ci/unit_test.py b/scripts/pr-ci/unit_test.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..9f8c9b676f1c90cd11b6f619eaf87b93b7a8164a
+index 0000000000000000000000000000000000000000..3b9875d0883810297b3908a04d11889b5b1f4d96
 --- /dev/null
 +++ b/scripts/pr-ci/unit_test.py
 @@ -0,0 +1,160 @@
@@ -1216,7 +1233,7 @@ index 0000000000000000000000000000000000000000..9f8c9b676f1c90cd11b6f619eaf87b93
 +
 +
 +def parse_args(argv: list[str]) -> argparse.Namespace:
-+    parser = argparse.ArgumentParser(description="Run Lesson 5.3 Go unit tests.")
++    parser = argparse.ArgumentParser(description="Run the Lesson 5.3 Go unit tests.")
 +    parser.add_argument("--output-dir", required=True)
 +    parser.add_argument("--repository", required=True)
 +    parser.add_argument("--workflow-run-id", required=True)
@@ -1364,19 +1381,22 @@ index 0000000000000000000000000000000000000000..77f0482965ac2417e557f6f4ba209fda
 +    assert not build_package.SEMVER_PATTERN.match("v0.1.0")
 diff --git a/tests/pr-ci/test_static_analysis.py b/tests/pr-ci/test_static_analysis.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..5140c54600d8478a577ee5078f22070015844951
+index 0000000000000000000000000000000000000000..759991d4a423d887219fc45a4c0bf3bbd345759c
 --- /dev/null
 +++ b/tests/pr-ci/test_static_analysis.py
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,206 @@
 +# Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 +
 +import importlib.util
++import json
 +import sys
 +from pathlib import Path
 +
 +
 +SCRIPT_DIR = Path(__file__).resolve().parents[2] / "scripts" / "pr-ci"
 +sys.path.insert(0, str(SCRIPT_DIR))
++import pr_ci_common
++
 +MODULE_PATH = SCRIPT_DIR / "static_analysis.py"
 +SPEC = importlib.util.spec_from_file_location("static_analysis", MODULE_PATH)
 +static_analysis = importlib.util.module_from_spec(SPEC)
@@ -1396,3 +1416,178 @@ index 0000000000000000000000000000000000000000..5140c54600d8478a577ee5078f220700
 +
 +    assert result == "failure"
 +    assert "main.go" in reasons[0]
++
++
++def test_classify_gofmt_command_error_does_not_treat_diagnostics_as_file_names():
++    result, reasons = static_analysis.classify_gofmt(127, "ERROR: gofmt is unavailable\n")
++
++    assert result == "failure"
++    assert reasons == ["gofmt -l exited with rc=127"]
++
++
++def test_common_run_command_appends_diagnostics_with_command_headers(tmp_path):
++    log_path = tmp_path / "command.log"
++
++    pr_ci_common.run_command(
++        [sys.executable, "-c", "print('first')"],
++        cwd=tmp_path,
++        log_path=log_path,
++    )
++    pr_ci_common.run_command(
++        [sys.executable, "-c", "print('second')"],
++        cwd=tmp_path,
++        log_path=log_path,
++        append=True,
++    )
++
++    log = log_path.read_text(encoding="utf-8")
++    assert log.count("$ ") == 2
++    assert "first" in log
++    assert "second" in log
++
++
++def test_static_analysis_adds_gofmt_diff_without_polluting_file_list(tmp_path, monkeypatch):
++    app_dir = tmp_path / "app"
++    app_dir.mkdir()
++    (app_dir / "go.mod").write_text(
++        "module example.com/issue40-static-analysis\n\ngo 1.26.0\n",
++        encoding="utf-8",
++    )
++    (app_dir / "main.go").write_text("package main\nfunc main(){println(\"x\")}\n", encoding="utf-8")
++    output_dir = tmp_path / "evidence"
++    def fake_run_command(args, **kwargs):
++        log_path = kwargs["log_path"]
++        log_path.parent.mkdir(parents=True, exist_ok=True)
++        if args == ["gofmt", "-l", "."]:
++            output = "main.go\n"
++        elif args == ["gofmt", "-d", "."]:
++            output = (
++                "diff main.go.orig main.go\n"
++                "--- main.go.orig\n"
++                "+++ main.go\n"
++                "@@ -1,2 +1,5 @@\n"
++                " package main\n"
++                "-func main(){println(\"x\")}\n"
++                "+func main() {\n"
++                "+\tprintln(\"x\")\n"
++                "+}\n"
++            )
++        else:
++            output = ""
++        mode = "a" if kwargs.get("append") else "w"
++        with log_path.open(mode, encoding="utf-8") as log_file:
++            log_file.write(f"$ {' '.join(args)}\n{output}")
++        return {"returncode": 0, "stdout": output, "log_path": log_path.as_posix()}
++
++    monkeypatch.setattr(static_analysis, "run_command", fake_run_command)
++    monkeypatch.setattr(pr_ci_common, "repo_root", lambda: tmp_path)
++    monkeypatch.setattr(pr_ci_common, "git_value", lambda args, *, cwd: "test-git-value")
++    original_repo_root = static_analysis.repo_root
++    static_analysis.repo_root = lambda: tmp_path
++    try:
++        rc = static_analysis.main(
++            [
++                "--output-dir",
++                str(output_dir),
++                "--repository",
++                "RanamicusTechnology/11-env-hands-on",
++                "--workflow-run-id",
++                "100",
++                "--workflow-run-attempt",
++                "1",
++                "--test-run-id",
++                "TR-UT-ISSUE-40-100-A1",
++                "--issue-number",
++                "40",
++                "--target-version",
++                "0.0.0",
++                "--required-final-stage",
++                "UT",
++                "--pr-number",
++                "41",
++                "--pr-head-sha",
++                "abc123",
++                "--created-at",
++                "2026-08-03T00:00:00Z",
++            ]
++        )
++    finally:
++        static_analysis.repo_root = original_repo_root
++
++    assert rc == 1
++    assert (app_dir / "main.go").read_text(encoding="utf-8") == (
++        "package main\nfunc main(){println(\"x\")}\n"
++    )
++    payload = json.loads(
++        (output_dir / "static-analysis-result.json").read_text(encoding="utf-8")
++    )
++    assert "iac_lint" not in payload["checks"]
++    assert payload["checks"]["gofmt"]["unformatted_files"] == ["main.go"]
++    assert payload["checks"]["gofmt"]["diff_generated"] is True
++    log = (output_dir / "logs" / "gofmt.log").read_text(encoding="utf-8")
++    assert "$ gofmt -l ." in log
++    assert "$ gofmt -d ." in log
++    assert "main.go" in log
++    assert "@@" in log
++    assert "func main(){println" in log
++    assert "func main() {" in log
++
++
++def test_static_analysis_does_not_run_gofmt_diff_for_formatted_source(tmp_path, monkeypatch):
++    app_dir = tmp_path / "app"
++    app_dir.mkdir()
++    (app_dir / "go.mod").write_text(
++        "module example.com/issue40-static-analysis\n\ngo 1.26.0\n",
++        encoding="utf-8",
++    )
++    (app_dir / "main.go").write_bytes(
++        b'package main\n\nfunc main() {\n\tprintln("x")\n}\n'
++    )
++    output_dir = tmp_path / "evidence"
++    def fake_run_command(args, **kwargs):
++        log_path = kwargs["log_path"]
++        log_path.parent.mkdir(parents=True, exist_ok=True)
++        log_path.write_text(f"$ {' '.join(args)}\n", encoding="utf-8")
++        return {"returncode": 0, "stdout": "", "log_path": log_path.as_posix()}
++
++    monkeypatch.setattr(static_analysis, "run_command", fake_run_command)
++    monkeypatch.setattr(pr_ci_common, "repo_root", lambda: tmp_path)
++    monkeypatch.setattr(pr_ci_common, "git_value", lambda args, *, cwd: "test-git-value")
++    original_repo_root = static_analysis.repo_root
++    static_analysis.repo_root = lambda: tmp_path
++    try:
++        rc = static_analysis.main(
++            [
++                "--output-dir",
++                str(output_dir),
++                "--repository",
++                "RanamicusTechnology/11-env-hands-on",
++                "--workflow-run-id",
++                "100",
++                "--workflow-run-attempt",
++                "1",
++                "--test-run-id",
++                "TR-UT-ISSUE-40-100-A1",
++                "--issue-number",
++                "40",
++                "--target-version",
++                "0.0.0",
++                "--required-final-stage",
++                "UT",
++                "--pr-number",
++                "41",
++                "--pr-head-sha",
++                "abc123",
++            ]
++        )
++    finally:
++        static_analysis.repo_root = original_repo_root
++
++    assert rc == 0
++    payload = json.loads(
++        (output_dir / "static-analysis-result.json").read_text(encoding="utf-8")
++    )
++    assert payload["checks"]["gofmt"]["diff_generated"] is False
++    assert "$ gofmt -d ." not in (
++        output_dir / "logs" / "gofmt.log"
++    ).read_text(encoding="utf-8")

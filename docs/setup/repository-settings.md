@@ -82,15 +82,15 @@ PR CIはworkflow内の`permissions`で必要なread権限だけを宣言する�
 ```text
 Settings
 → Rules
-→ Rulesets
-→ main-protection
-→ Require status checks to pass
-→ Show additional settings
-→ Add checks
-→ pr-ci-gateを検索して選択
-→ Require branches to be up to date before merging
-→ Enforcement status: Active
-→ Save changes
+  → Rulesets
+    → main-protection
+      → Require status checks to pass
+        → Show additional settings
+        → Add checks
+          → pr-ci-gateを検索して選択
+        → Require branches to be up to date before merging: 有効
+      → Enforcement status: Active
+      → Save changes
 ```
 
 画面操作は次のとおり。

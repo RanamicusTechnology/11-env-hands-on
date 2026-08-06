@@ -58,6 +58,7 @@ def run_command(
     cwd: Path,
     log_path: Path,
     env: dict[str, str] | None = None,
+    append: bool = False,
 ) -> dict[str, Any]:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -75,7 +76,12 @@ def run_command(
     except OSError as exc:
         returncode = 127
         output = f"ERROR: failed to execute {args[0]}: {exc}\n"
-    log_path.write_text(output, encoding="utf-8")
+    serialized = f"$ {' '.join(args)}\n{output}"
+    mode = "a" if append else "w"
+    with log_path.open(mode, encoding="utf-8") as log_file:
+        log_file.write(serialized)
+        if not serialized.endswith("\n"):
+            log_file.write("\n")
     return {
         "command": args,
         "returncode": returncode,
