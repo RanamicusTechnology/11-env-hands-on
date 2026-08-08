@@ -276,6 +276,11 @@ def short_junit_message(element: ET.Element | None) -> str:
     return message[:240]
 
 
+def markdown_table_cell(value: str) -> str:
+    normalized = "<br>".join(value.splitlines())
+    return normalized.replace("|", "\\|")
+
+
 def parse_junit_results(junit_path: Path, expected_case_ids: list[str]) -> dict[str, Any]:
     root = ET.parse(junit_path).getroot()
     test_cases: list[dict[str, Any]] = []
@@ -418,7 +423,7 @@ def write_test_result_artifacts(
         "|---|---|---|---:|---|",
     ]
     for case in junit_analysis["test_cases"]:
-        message = case["message"].replace("|", "\\|")
+        message = markdown_table_cell(case["message"])
         case_rows.append(
             f"| `{case['test_case_id'] or '<missing>'}` | `{case['result']}` | "
             f"`{case['name']}` | `{case['duration_seconds']}` | {message or '-'} |"
