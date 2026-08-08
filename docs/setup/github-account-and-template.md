@@ -18,7 +18,7 @@ GitHubアカウントとローカルのGit／Bash環境を準備し、公開テ�
 
 | OS | 標準の準備 |
 | --- | --- |
-| Windows | Git for Windowsをインストールし、Git Bashを使用する。 |
+| Windows | [Git for Windows](https://git-scm.com/install/windows.html)をインストールし、Git Bashを使用する。 |
 | macOS／Linux | 利用可能なterminalとGitを使用する。Bashまたは同等のBash環境でコマンドを実行する。 |
 
 以降の`bash`、`git`コマンドは、WindowsではGit Bash、macOS／Linuxでは利用可能なBash環境で実行する。PowerShell専用の手順ではない。
@@ -97,7 +97,7 @@ Windowsでコマンドが見つからない場合はGit for Windowsのインス�
 
 ## 5. 自分の演習用リポジトリをcloneする
 
-講師の公開テンプレートではなく、手順2で自分のアカウントに作成した演習用リポジトリをHTTPSでcloneする。`<account>`と`<repository>`は、自分のOwner名とリポジトリ名へ置き換える。
+公開テンプレートではなく、手順2で自分のアカウントに作成した演習用リポジトリを、ローカルにcloneする。`<account>`と`<repository>`は、自分のOwner名とリポジトリ名へ置き換える。
 
 ```bash
 git clone https://github.com/<account>/<repository>.git

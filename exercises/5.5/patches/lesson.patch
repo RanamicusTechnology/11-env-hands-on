@@ -37,7 +37,7 @@ index f6cf226bf56edb6ca37c72e525ad4018234a4824..bcd376cc2134f1224c42d89d03786b7c
            TARGET_VERSION: ${{ needs.governance-check.outputs.target_version }}
            REQUIRED_FINAL_STAGE: ${{ needs.governance-check.outputs.required_final_stage }}
 diff --git a/scripts/pr-ci/environment_lifecycle.py b/scripts/pr-ci/environment_lifecycle.py
-index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18f5717d0c 100644
+index 8f88fb8a740835aac472c1e2acbf26e210375714..d8dc09f6b542902f4eb6347b259b27630b81b371 100644
 --- a/scripts/pr-ci/environment_lifecycle.py
 +++ b/scripts/pr-ci/environment_lifecycle.py
 @@ -5,6 +5,7 @@ from __future__ import annotations
@@ -139,7 +139,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
          return "FailedBeforeTest"
      return "Failed"
 
-@@ -162,6 +203,330 @@ def write_log(path: Path, message: str) -> None:
+@@ -162,6 +203,335 @@ def write_log(path: Path, message: str) -> None:
      path.write_text(message if message.endswith("\n") else message + "\n", encoding="utf-8")
 
 
@@ -214,6 +214,11 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
 +    if not message:
 +        message = (element.text or "").strip().splitlines()[0] if (element.text or "").strip() else ""
 +    return message[:240]
++
++
++def markdown_table_cell(value: str) -> str:
++    normalized = "<br>".join(value.splitlines())
++    return normalized.replace("|", "\\|")
 +
 +
 +def parse_junit_results(junit_path: Path, expected_case_ids: list[str]) -> dict[str, Any]:
@@ -358,7 +363,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
 +        "|---|---|---|---:|---|",
 +    ]
 +    for case in junit_analysis["test_cases"]:
-+        message = case["message"].replace("|", "\\|")
++        message = markdown_table_cell(case["message"])
 +        case_rows.append(
 +            f"| `{case['test_case_id'] or '<missing>'}` | `{case['result']}` | "
 +            f"`{case['name']}` | `{case['duration_seconds']}` | {message or '-'} |"
@@ -470,7 +475,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
  def run_command(
      args: list[str],
      *,
-@@ -169,6 +534,7 @@ def run_command(
+@@ -169,6 +539,7 @@ def run_command(
      log_path: Path,
      append: bool = False,
      check: bool = False,
@@ -478,7 +483,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
  ) -> CommandResult:
      log_path.parent.mkdir(parents=True, exist_ok=True)
      try:
-@@ -178,6 +544,7 @@ def run_command(
+@@ -178,6 +549,7 @@ def run_command(
              text=True,
              stdout=subprocess.PIPE,
              stderr=subprocess.STDOUT,
@@ -486,7 +491,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
              check=False,
          )
          result = CommandResult(args, completed.returncode, completed.stdout or "")
-@@ -405,7 +772,7 @@ def run_ansible_and_checks(
+@@ -405,7 +777,7 @@ def run_ansible_and_checks(
      output_dir: Path,
      logs_dir: Path,
      outputs: dict[str, str],
@@ -495,7 +500,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
      inventory = output_dir / "inventory.yml"
      if not inventory.exists():
          state.failure_reasons.append("Ansible inventory was not created")
-@@ -413,8 +780,7 @@ def run_ansible_and_checks(
+@@ -413,8 +785,7 @@ def run_ansible_and_checks(
          state.readiness_check_execution_state = "Skipped"
          state.readiness_check_result = "FailedBeforeCheck"
          state.test_execution_state = "Failed"
@@ -505,7 +510,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
 
      ansible_log = logs_dir / "ansible.log"
      infra = run_command(
-@@ -429,8 +795,7 @@ def run_ansible_and_checks(
+@@ -429,8 +800,7 @@ def run_ansible_and_checks(
          state.readiness_check_execution_state = "Skipped"
          state.readiness_check_result = "FailedBeforeCheck"
          state.test_execution_state = "Failed"
@@ -515,7 +520,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
 
      binary_path = Path(args.build_artifact_dir) / "go-app-linux-amd64"
      deploy = run_command(
-@@ -454,8 +819,7 @@ def run_ansible_and_checks(
+@@ -454,8 +824,7 @@ def run_ansible_and_checks(
          state.readiness_check_execution_state = "Skipped"
          state.readiness_check_result = "FailedBeforeCheck"
          state.test_execution_state = "Failed"
@@ -525,7 +530,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
 
      state.environment_creation_state = "Completed"
      state.readiness_check_execution_state = "InProgress"
-@@ -466,8 +830,7 @@ def run_ansible_and_checks(
+@@ -466,8 +835,7 @@ def run_ansible_and_checks(
          state.readiness_check_execution_state = "Failed"
          state.readiness_check_result = "Failed"
          state.test_execution_state = "Failed"
@@ -535,7 +540,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
 
      check_log = logs_dir / "startup-connectivity-check.log"
      checks = [
-@@ -539,9 +902,211 @@ def run_ansible_and_checks(
+@@ -539,9 +907,211 @@ def run_ansible_and_checks(
              state.failure_reasons.append("host nginx health request failed")
              failed = True
 
@@ -750,7 +755,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
      state.overall_test_result = derive_overall_test_result(state)
 
 
-@@ -723,6 +1288,8 @@ def build_summary(manifest: dict[str, Any], result_payload: dict[str, Any]) -> s
+@@ -723,6 +1293,8 @@ def build_summary(manifest: dict[str, Any], result_payload: dict[str, Any]) -> s
              f"| Environment face ID | `{manifest['environment_face_id_or_not_created']}` |",
              f"| Environment creation state | `{manifest['environment_creation_state']}` |",
              f"| Readiness check | `{manifest['readiness_check_execution_state']} / {manifest['readiness_check_result']}` |",
@@ -759,7 +764,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
              f"| Overall test result | `{manifest['overall_test_result']}` |",
              f"| Cleanup state | `{manifest['cleanup_state']}` |",
              f"| Remaining resource count | `{manifest['remaining_resource_count']}` |",
-@@ -730,6 +1297,8 @@ def build_summary(manifest: dict[str, Any], result_payload: dict[str, Any]) -> s
+@@ -730,6 +1302,8 @@ def build_summary(manifest: dict[str, Any], result_payload: dict[str, Any]) -> s
              f"| Test execution state (compatibility) | `{manifest['test_execution_state']}` |",
              f"| Cleanup target count | `{manifest['cleanup_target_count']}` |",
              f"| Cleanup warning | `{str(manifest['cleanup_warning']).lower()}` |",
@@ -768,7 +773,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
              f"| Evidence Artifact | `{manifest['artifact_name']}` |",
              "",
              "## Failure reasons",
-@@ -780,6 +1349,12 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
+@@ -780,6 +1354,12 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
          target_version=args.target_version,
          required_final_stage=args.required_final_stage,
      )
@@ -781,7 +786,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
      manifest.update(
          {
              "environment_face_id_or_not_created": state.environment_face_id or "NOT_CREATED",
-@@ -790,6 +1365,12 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
+@@ -790,6 +1370,12 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
              "overall_test_result": state.overall_test_result,
              "test_result": state.overall_test_result,
              "test_result_alias_of": "overall_test_result",
@@ -794,7 +799,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
              "cleanup_state": state.cleanup_state,
              "cleanup_target_count": state.cleanup_target_count,
              "remaining_resource_count": state.remaining_resource_count,
-@@ -809,6 +1390,12 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
+@@ -809,6 +1395,12 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
          "artifact_ready": state.artifact_ready,
          "failure_reasons": state.failure_reasons,
          "warnings": state.warnings,
@@ -807,7 +812,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
          "build_artifact": {
              "name": args.build_artifact_name,
              "id": args.build_artifact_id,
-@@ -825,6 +1412,18 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
+@@ -825,6 +1417,18 @@ def finalize_result(args: argparse.Namespace, state: LifecycleState, output_dir:
              "test_result": state.overall_test_result,
              "test_result_alias_of": "overall_test_result",
          },
@@ -826,7 +831,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
          "cleanup": {
              "cleanup_state": state.cleanup_state,
              "cleanup_warning": state.cleanup_warning,
-@@ -877,7 +1476,6 @@ def main(argv: list[str]) -> int:
+@@ -877,7 +1481,6 @@ def main(argv: list[str]) -> int:
                  state.environment_creation_state = "Failed"
                  state.readiness_check_execution_state = "Skipped"
                  state.readiness_check_result = "FailedBeforeCheck"
@@ -834,7 +839,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
              else:
                  outputs = run_terraform_apply(
                      args,
-@@ -890,7 +1488,7 @@ def main(argv: list[str]) -> int:
+@@ -890,7 +1493,7 @@ def main(argv: list[str]) -> int:
                  )
 
              if state.environment_creation_state == "InProgress":
@@ -843,7 +848,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
                      args,
                      state,
                      root=root,
-@@ -898,6 +1496,14 @@ def main(argv: list[str]) -> int:
+@@ -898,6 +1501,14 @@ def main(argv: list[str]) -> int:
                      logs_dir=logs_dir,
                      outputs=outputs,
                  )
@@ -858,7 +863,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
          else:
              write_log(logs_dir / "terraform-plan.log", "Upstream prerequisites were not met; Terraform plan was skipped.")
              write_log(logs_dir / "terraform-apply.log", "Upstream prerequisites were not met; Terraform apply was skipped.")
-@@ -907,13 +1513,10 @@ def main(argv: list[str]) -> int:
+@@ -907,13 +1518,10 @@ def main(argv: list[str]) -> int:
          collect_logs(root, logs_dir, outputs.get("container_name", "") if outputs else "")
          cleanup(args, state, root=root, logs_dir=logs_dir, label_filter=label_filter, image_name=image_name)
          verify_residue(state, root=root, logs_dir=logs_dir, label_filter=label_filter)
@@ -874,7 +879,7 @@ index 8f88fb8a740835aac472c1e2acbf26e210375714..5e630eac246e122b646e8313c7b27e18
      manifest, result_payload, summary = finalize_result(args, state, output_dir)
      write_json(output_dir / "manifest.json", manifest)
      write_json(output_dir / "environment-lifecycle-result.json", result_payload)
-@@ -933,10 +1536,16 @@ def main(argv: list[str]) -> int:
+@@ -933,10 +1541,16 @@ def main(argv: list[str]) -> int:
              "overall_test_result": state.overall_test_result,
              "test_result": state.overall_test_result,
              "test_result_alias_of": "overall_test_result",
@@ -1338,7 +1343,7 @@ index 0000000000000000000000000000000000000000..5b11dfb29a1991822335c729fb6c094a
 +    assert payload["service"] == "ms1-go-api"
 +    assert payload["version"] == expected_version
 diff --git a/tests/pr-ci/test_environment_lifecycle.py b/tests/pr-ci/test_environment_lifecycle.py
-index e7b4596977cf79b3bc39a60d18c2c79e2ac6a88b..07e1b2a68954922672bbcf3289fea83cfe559ad7 100644
+index e7b4596977cf79b3bc39a60d18c2c79e2ac6a88b..2e359adc76880a4edcff3c1a55953afc82cb98e0 100644
 --- a/tests/pr-ci/test_environment_lifecycle.py
 +++ b/tests/pr-ci/test_environment_lifecycle.py
 @@ -4,11 +4,16 @@ import importlib.util
@@ -1370,7 +1375,7 @@ index e7b4596977cf79b3bc39a60d18c2c79e2ac6a88b..07e1b2a68954922672bbcf3289fea83c
  def write_build_artifact(build_dir, version="v0.0.0+b.1.a.1"):
      build_dir.mkdir()
      binary = build_dir / "go-app-linux-amd64"
-@@ -33,10 +43,199 @@ def write_build_artifact(build_dir, version="v0.0.0+b.1.a.1"):
+@@ -33,10 +43,278 @@ def write_build_artifact(build_dir, version="v0.0.0+b.1.a.1"):
      return checksum
 
 
@@ -1489,6 +1494,85 @@ index e7b4596977cf79b3bc39a60d18c2c79e2ac6a88b..07e1b2a68954922672bbcf3289fea83c
 +    assert len(reasons) == 4
 +
 +
++@pytest.mark.parametrize("test_key", ["infrastructure", "api"])
++@pytest.mark.parametrize(
++    ("raw_message", "rendered_message"),
++    [
++        ("line1\nline2", "line1<br>line2"),
++        ("line1\r\nline2", "line1<br>line2"),
++        ("line1\rline2", "line1<br>line2"),
++        (
++            "line1 | expected\nline2 | actual",
++            "line1 \\| expected<br>line2 \\| actual",
++        ),
++    ],
++)
++def test_formal_test_summary_normalizes_message_line_breaks_without_changing_json(
++    tmp_path,
++    test_key,
++    raw_message,
++    rendered_message,
++):
++    output_dir = tmp_path / "evidence"
++    test_case_id = environment_lifecycle.FORMAL_TEST_CASE_IDS[test_key][0]
++    analysis = environment_lifecycle.empty_formal_test_analysis([test_case_id])
++    analysis.update(
++        {
++            "counts": {
++                "total": 1,
++                "passed": 0,
++                "failed": 1,
++                "errors": 0,
++                "skipped": 0,
++            },
++            "collected_case_ids": [test_case_id],
++            "missing_case_ids": [],
++            "test_cases": [
++                {
++                    "test_case_id": test_case_id,
++                    "name": "test_failed_case",
++                    "result": "Failed",
++                    "duration_seconds": 0.1,
++                    "message": raw_message,
++                }
++            ],
++        }
++    )
++    result_path = f"test-results/{test_key}-test-result.json"
++    summary_path = f"summaries/{test_key}-test-summary.md"
++
++    environment_lifecycle.write_test_result_artifacts(
++        output_dir=output_dir,
++        test_key=test_key,
++        title=f"{test_key}-test",
++        execution_state="Failed",
++        result="Failed",
++        command=["pytest", f"tests/{test_key}"],
++        returncode=1,
++        log_path=f"logs/{test_key}-test.log",
++        junit_path=f"test-results/{test_key}-test-junit.xml",
++        result_path=result_path,
++        summary_path=summary_path,
++        failure_reasons=["formal test failed"],
++        junit_analysis=analysis,
++        execution_mode="actual",
++    )
++
++    payload = json.loads((output_dir / result_path).read_text(encoding="utf-8"))
++    assert payload["test_cases"][0]["message"] == raw_message
++
++    summary = (output_dir / summary_path).read_text(encoding="utf-8")
++    case_rows = [
++        line
++        for line in summary.splitlines()
++        if line.startswith(f"| `{test_case_id}` |")
++    ]
++    assert case_rows == [
++        f"| `{test_case_id}` | `Failed` | `test_failed_case` | `0.1` | "
++        f"{rendered_message} |"
++    ]
++
++
 +def test_pytest_suite_writes_failure_placeholder_when_junit_is_missing(tmp_path):
 +    output_dir = tmp_path / "evidence"
 +    state = environment_lifecycle.LifecycleState()
@@ -1570,7 +1654,7 @@ index e7b4596977cf79b3bc39a60d18c2c79e2ac6a88b..07e1b2a68954922672bbcf3289fea83c
  def test_early_failure_finalizes_environment_evidence_without_docker(tmp_path):
      output_dir = tmp_path / "evidence"
      missing_build_dir = tmp_path / "missing-build-artifact"
-@@ -104,11 +303,22 @@ def test_early_failure_finalizes_environment_evidence_without_docker(tmp_path):
+@@ -104,11 +382,22 @@ def test_early_failure_finalizes_environment_evidence_without_docker(tmp_path):
      assert result["environment_lifecycle_result"] == "skipped_prerequisites"
      assert manifest["environment_face_id_or_not_created"] == "NOT_CREATED"
      assert manifest["environment_creation_state"] == "NotStarted"
@@ -1593,7 +1677,7 @@ index e7b4596977cf79b3bc39a60d18c2c79e2ac6a88b..07e1b2a68954922672bbcf3289fea83c
 
 
  def test_residue_verification_preserves_cleanup_not_attempted(tmp_path):
-@@ -137,7 +347,7 @@ def test_terraform_fmt_failure_before_apply_records_completed_cleanup(tmp_path):
+@@ -137,7 +426,7 @@ def test_terraform_fmt_failure_before_apply_records_completed_cleanup(tmp_path):
      checksum = write_build_artifact(build_dir, version)
      original_run_command = environment_lifecycle.run_command
 
@@ -1602,7 +1686,7 @@ index e7b4596977cf79b3bc39a60d18c2c79e2ac6a88b..07e1b2a68954922672bbcf3289fea83c
          command = " ".join(args)
          if args[:2] == ["docker", "build"]:
              result = environment_lifecycle.CommandResult(args, 0, "image built\n")
-@@ -224,8 +434,315 @@ def test_terraform_fmt_failure_before_apply_records_completed_cleanup(tmp_path):
+@@ -224,8 +513,315 @@ def test_terraform_fmt_failure_before_apply_records_completed_cleanup(tmp_path):
      assert result["cleanup"]["environment_resources_may_exist"] is False
      assert result["cleanup"]["cleanup_attempted"] is True
      assert manifest["environment_creation_state"] == "Failed"

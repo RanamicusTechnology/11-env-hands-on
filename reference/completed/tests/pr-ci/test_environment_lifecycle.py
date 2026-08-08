@@ -158,6 +158,85 @@ def test_parse_junit_detects_id_integrity_and_case_results(tmp_path):
     assert len(reasons) == 4
 
 
+@pytest.mark.parametrize("test_key", ["infrastructure", "api"])
+@pytest.mark.parametrize(
+    ("raw_message", "rendered_message"),
+    [
+        ("line1\nline2", "line1<br>line2"),
+        ("line1\r\nline2", "line1<br>line2"),
+        ("line1\rline2", "line1<br>line2"),
+        (
+            "line1 | expected\nline2 | actual",
+            "line1 \\| expected<br>line2 \\| actual",
+        ),
+    ],
+)
+def test_formal_test_summary_normalizes_message_line_breaks_without_changing_json(
+    tmp_path,
+    test_key,
+    raw_message,
+    rendered_message,
+):
+    output_dir = tmp_path / "evidence"
+    test_case_id = environment_lifecycle.FORMAL_TEST_CASE_IDS[test_key][0]
+    analysis = environment_lifecycle.empty_formal_test_analysis([test_case_id])
+    analysis.update(
+        {
+            "counts": {
+                "total": 1,
+                "passed": 0,
+                "failed": 1,
+                "errors": 0,
+                "skipped": 0,
+            },
+            "collected_case_ids": [test_case_id],
+            "missing_case_ids": [],
+            "test_cases": [
+                {
+                    "test_case_id": test_case_id,
+                    "name": "test_failed_case",
+                    "result": "Failed",
+                    "duration_seconds": 0.1,
+                    "message": raw_message,
+                }
+            ],
+        }
+    )
+    result_path = f"test-results/{test_key}-test-result.json"
+    summary_path = f"summaries/{test_key}-test-summary.md"
+
+    environment_lifecycle.write_test_result_artifacts(
+        output_dir=output_dir,
+        test_key=test_key,
+        title=f"{test_key}-test",
+        execution_state="Failed",
+        result="Failed",
+        command=["pytest", f"tests/{test_key}"],
+        returncode=1,
+        log_path=f"logs/{test_key}-test.log",
+        junit_path=f"test-results/{test_key}-test-junit.xml",
+        result_path=result_path,
+        summary_path=summary_path,
+        failure_reasons=["formal test failed"],
+        junit_analysis=analysis,
+        execution_mode="actual",
+    )
+
+    payload = json.loads((output_dir / result_path).read_text(encoding="utf-8"))
+    assert payload["test_cases"][0]["message"] == raw_message
+
+    summary = (output_dir / summary_path).read_text(encoding="utf-8")
+    case_rows = [
+        line
+        for line in summary.splitlines()
+        if line.startswith(f"| `{test_case_id}` |")
+    ]
+    assert case_rows == [
+        f"| `{test_case_id}` | `Failed` | `test_failed_case` | `0.1` | "
+        f"{rendered_message} |"
+    ]
+
+
 def test_pytest_suite_writes_failure_placeholder_when_junit_is_missing(tmp_path):
     output_dir = tmp_path / "evidence"
     state = environment_lifecycle.LifecycleState()
