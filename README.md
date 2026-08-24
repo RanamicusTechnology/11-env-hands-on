@@ -121,6 +121,18 @@ bash scripts/exercises/apply-failure-scenario.sh static-analysis-failure
 
 演習環境の準備は[GitHubアカウント、テンプレート、ローカルGitの準備](docs/setup/github-account-and-template.md)と[リポジトリ設定](docs/setup/repository-settings.md)に整理しています。`Template作成 → Repository設定Phase A → clone → 5.2`の順に進めます。受講者は5.1から5.6まで順に進め、CI失敗、Artifact不足、証跡不足、5.6異常系の確認で迷った場合は[トラブルシューティング](docs/troubleshooting/README.md)を参照します。
 
-## ライセンス上の注意
+## ライセンス
 
-本教材はオープンソースとして再利用・再配布する前提ではありません。受講者がPublicな演習用リポジトリを作成できることは、教材へOSSライセンスを付与することを意味しません。公開テンプレートへの`LICENSE`掲載は、この教材資源では確定しません。
+本RepositoryはPublic Repositoryとして公開しますが、本教材はOpen Source Software（OSS）として提供するものではありません。Publicであることや、GitHubの標準機能で閲覧・forkできることは、一般的な再利用・再配布・再許諾・商用利用を許可するOSSライセンスの付与を意味しません。GitHubから直接付与されるプラットフォーム上の権利には、GitHubの利用規約が別途適用されます。
+
+本Repositoryで特定されるUdemyコースへ適法に受講登録した個人、またはRanamicus Technology合同会社が別途書面で許諾した個人を`Eligible Learner`とします。Eligible Learnerは、個人学習と本コースのハンズオン演習のため、TemplateからPublicまたはPrivateの`Exercise Repository`を作成し、教材ファイルの変更、branch、commit、Pull Request、GitHub Actionsの実行、演習結果の保存・表示・公開を行えます。PublicのExercise Repositoryも許可されますが、第三者への一般的な再配布ライセンスを意味しません。
+
+教材そのものまたは実質的部分の再販売、一般再配布、別教材への転載・組込み、社内外の研修教材への転用、commercial training、consultingの顧客成果物、製品・サービスへの無断組込み等は禁止されます。一方、教材から学んだ一般的な知識、技能、アイデア、概念、方法、ノウハウを業務・研究等へ適用すること自体は制限しません。
+
+第三者ソフトウェア、GitHub Actions、container image、package、service等には、それぞれのlicense、noticeおよび利用規約が適用されます。
+
+- 日本語正文と詳細条件: [`LICENSE`](LICENSE)
+- 参考英訳: [`LICENSE.en.md`](LICENSE.en.md)
+- 第三者資源の確認結果: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
+
+READMEの説明と`LICENSE`が矛盾する場合は、`LICENSE`が優先します。現在の`LICENSE`は社外弁護士による最終確認前の`Draft for Legal Review`であり、Effective Dateは最終承認時に確定します。
