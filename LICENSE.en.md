@@ -39,11 +39,18 @@ party owns copyright or other rights.
 1.5 “Eligible Learner” means an individual who satisfies either of the
 following conditions:
 
-(a) the individual has lawfully enrolled in the Udemy course identified by
-the Repository; or
+(a) the individual currently has lawful enrollment eligibility or a lawful
+right of access on Udemy to the Udemy course identified by the Repository; or
 
 (b) the Licensor has separately authorized that individual in writing to use
-the Materials under this LICENSE.
+the Materials under this LICENSE, and that written authorization remains in
+effect.
+
+An individual who previously satisfied paragraph (a) ceases to be an Eligible
+Learner when the individual loses lawful access to that course because of a
+full refund, purchase cancellation, unenrollment, loss of subscription access,
+revocation of access, or any other reason, unless the individual has a written
+authorization that remains in effect under paragraph (b).
 
 Merely viewing the Repository or accessing it through GitHub does not make a
 person an Eligible Learner.
@@ -76,6 +83,20 @@ redistribute, sublicense, or commercially use the Materials.
 2.4 This LICENSE does not prohibit, deny, or restrict rights granted directly
 to GitHub or another platform under applicable Platform Terms.
 
+2.5 This LICENSE is made available in the root of the Repository for review
+before an Eligible Learner exercises any additional right specified in
+Sections 4 and 5.
+
+2.6 Agreement to this LICENSE is required before exercising any additional
+right specified in Sections 4 and 5.
+
+2.7 Creating an Exercise Repository from a Template Repository, cloning the
+Materials for an exercise, or modifying the Materials for an exercise is
+conduct indicating agreement to this LICENSE. Merely viewing the Repository,
+or forking it through GitHub's standard functionality under rights arising
+directly from Platform Terms or law, does not by itself indicate agreement to
+this LICENSE.
+
 ## 3. Ownership and limited license
 
 3.1 Except where otherwise stated, copyright and other rights in the Materials
@@ -89,6 +110,11 @@ rights are granted except as expressly provided in Sections 4 and 5.
 respective rights holders. This LICENSE neither assigns rights in Third-Party
 Materials to the Licensor nor sublicenses those materials through the
 Licensor.
+
+3.4 An individual who, under applicable law, cannot validly agree to this
+LICENSE alone must obtain the consent of a legal representative or other person
+authorized under applicable law before exercising the rights specified in
+Sections 4 and 5.
 
 ## 4. Uses permitted to Eligible Learners
 
@@ -188,10 +214,14 @@ Exercise Repository or completed the exercises.
 8.3 This Section does not extinguish, limit, or transfer rights held by the
 Licensor in the original Materials or adaptations of the Materials.
 
-8.4 Terms applicable to external Contributions to the original Repository are
-separate from the license for Exercise Repositories under this LICENSE. This
-LICENSE does not establish rights treatment for external Contributions or a
-Contributor License Agreement.
+8.4 For the time being, the Licensor generally does not accept external Pull
+Requests, code, documentation, or other Contributions to the original
+Repository. Exercises are to be performed in an Exercise Repository controlled
+by each Eligible Learner. If the Licensor accepts external Contributions in
+the future, the Licensor will separately establish the required rights
+treatment and whether a Contributor License Agreement is required. This
+LICENSE does not itself accept external Contributions or establish their
+rights treatment.
 
 ## 9. Third-Party Materials
 
@@ -241,10 +271,11 @@ express or implied warranty of merchantability, fitness for a particular
 purpose, accuracy, completeness, continued availability, or
 otherwise with respect to the Materials.
 
-12.3 To the maximum extent permitted by applicable law, the Licensor is not
-liable for indirect, special, incidental, or consequential damages, lost
-profits, loss of data, or similar damages arising from use of or inability to
-use the Materials.
+12.3 Only where the relevant damage is not caused by the Licensor's willful
+misconduct or gross negligence, and to the maximum extent permitted by
+applicable law, the Licensor is not liable for indirect, special, incidental,
+or consequential damages, lost profits, loss of data, or similar damages
+arising from use of or inability to use the Materials.
 
 12.4 This Section does not exclude or limit liability that cannot be excluded
 or limited under mandatory law. The exclusions and limitations in this
@@ -252,25 +283,45 @@ Section do not apply to liability arising from the Licensor’s willful
 misconduct or gross negligence or to any other liability that cannot lawfully
 be excluded.
 
-12.5 This LICENSE does not establish a monetary cap on liability. Whether a
-liability cap is appropriate and, if so, its terms are matters for legal review
-at final approval.
-
 ## 13. Termination upon breach
 
-13.1 If an Eligible Learner breaches this LICENSE, the Licensor may terminate
-the additional license granted under this LICENSE.
+13.1 If an Eligible Learner commits a breach of this LICENSE that is curable by
+its nature, the Licensor will give notice identifying the breach and requiring
+its cure. The Eligible Learner has 14 days after receiving the notice to cure
+the breach sufficiently. If the breach is sufficiently cured within that
+period, the license will not terminate on account of that breach. If the breach
+is not sufficiently cured within that period, the Licensor may terminate the
+additional license granted under this LICENSE.
 
-13.2 After termination, the Eligible Learner may not continue uses that were
-additionally permitted under this LICENSE, unless the Licensor separately
-grants written permission again.
+13.2 Notwithstanding Section 13.1, the Licensor may terminate the license
+immediately without a cure period in the event of intentional unauthorized
+resale, general redistribution, or use for commercial training; repeated
+material breaches; or a material breach that is not curable by its nature.
 
-13.3 Termination under this Section does not terminate rights granted directly
+13.3 After termination, the individual may not continue uses that were
+additionally permitted under this LICENSE unless the Licensor separately
+grants a new written license.
+
+13.4 A terminated license is not automatically reinstated merely because the
+breach is later cured. A new written license from the Licensor is required to
+resume any additional use under this LICENSE after termination.
+
+13.5 Termination under this Section does not terminate rights granted directly
 to a user under applicable law or Platform Terms.
 
-13.4 This draft does not provide for automatic reinstatement upon cure, a cure
-period, or other reinstatement conditions. Whether such conditions are needed
-and their terms are matters for legal review at final approval.
+13.6 An individual who ceases to be an Eligible Learner under Section 1.5 must
+stop all additional use under this LICENSE at that time and, within 14 days
+after losing eligibility, either delete each Exercise Repository containing
+the Materials or, if retaining such a repository, remove all Materials and all
+adaptations of the Materials from it. Merely making the repository Private
+does not satisfy this obligation. The individual is not required to delete
+portions independently created by that individual that are neither Materials
+nor adaptations of the Materials.
+
+13.7 The loss of eligibility under Section 1.5 and the obligations in
+Section 13.6 do not prohibit merely viewing a Public Repository under rights
+arising directly from Platform Terms or law, and such viewing alone is not a
+breach of this LICENSE.
 
 ## 14. Version and future revisions
 
@@ -283,15 +334,18 @@ specified.
 14.3 A new Version does not automatically apply retroactively to Materials
 already obtained or to an existing Exercise Repository.
 
-14.4 Use of Materials in an Exercise Repository is in principle governed on
-the basis of the Version identified when that Exercise Repository was created
-or when those Materials were obtained. If a different Version is identified
-for new Materials obtained later, that identified Version applies to the new
-Materials.
+14.4 Use of existing Materials in an Exercise Repository is in principle
+governed by the Version identified when that Exercise Repository was created
+or when those Materials were obtained.
 
-14.5 This draft does not establish exceptional conditions for applying a new
-Version to existing users. Whether such conditions are needed and their terms
-are matters for legal review at final approval.
+14.5 Applying a new Version to existing Materials or an existing Exercise
+Repository requires the express consent of each affected user. The Licensor's
+publication or unilateral notice of a new Version alone does not apply that
+Version retroactively to existing Materials or an existing Exercise
+Repository.
+
+14.6 If a user newly obtains or uses Materials identified as subject to a new
+Version, the identified new Version applies to those new Materials.
 
 ## 15. Relationship with Udemy
 
@@ -307,14 +361,21 @@ co-provides this LICENSE.
 
 ## 16. Governing law and jurisdiction
 
-16.1 This LICENSE is governed by and construed under the laws of Japan.
+16.1 This LICENSE is governed by and construed under the laws of Japan. This
+does not exclude mandatory law or consumer protections that cannot be excluded
+under the law of the user's habitual residence or any other applicable law.
 
 16.2 The Tokyo District Court has exclusive jurisdiction as the court of first
 instance over disputes between the Licensor and an Eligible Learner arising
-from or relating to this LICENSE or the Materials, except where mandatory law
-or other applicable law does not permit that agreement.
+from or relating to this LICENSE or the Materials, except where mandatory law,
+consumer protection law, or other applicable law provides for jurisdiction
+that cannot be excluded.
 
-16.3 This Section does not amend, replace, or override governing-law or
+16.3 This Section does not waive or limit any right, remedy, consumer
+protection, or other protection that cannot be waived or limited under
+applicable law.
+
+16.4 This Section does not amend, replace, or override governing-law or
 jurisdiction provisions applicable to an agreement with GitHub, Udemy, or any
 other third party.
 

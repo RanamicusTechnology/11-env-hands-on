@@ -119,15 +119,21 @@ bash scripts/exercises/apply-failure-scenario.sh static-analysis-failure
 
 ## 開始手順と確認先
 
-演習環境の準備は[GitHubアカウント、テンプレート、ローカルGitの準備](docs/setup/github-account-and-template.md)と[リポジトリ設定](docs/setup/repository-settings.md)に整理しています。`Template作成 → Repository設定Phase A → clone → 5.2`の順に進めます。受講者は5.1から5.6まで順に進め、CI失敗、Artifact不足、証跡不足、5.6異常系の確認で迷った場合は[トラブルシューティング](docs/troubleshooting/README.md)を参照します。
+演習環境の準備は[GitHubアカウント、テンプレート、ローカルGitの準備](docs/setup/github-account-and-template.md)と[リポジトリ設定](docs/setup/repository-settings.md)に整理しています。`LICENSE確認・同意 → Template作成 → Repository設定Phase A → clone → 5.2`の順に進めます。受講者は5.1から5.6まで順に進め、CI失敗、Artifact不足、証跡不足、5.6異常系の確認で迷った場合は[トラブルシューティング](docs/troubleshooting/README.md)を参照します。
 
 ## ライセンス
 
 本RepositoryはPublic Repositoryとして公開しますが、本教材はOpen Source Software（OSS）として提供するものではありません。Publicであることや、GitHubの標準機能で閲覧・forkできることは、一般的な再利用・再配布・再許諾・商用利用を許可するOSSライセンスの付与を意味しません。GitHubから直接付与されるプラットフォーム上の権利には、GitHubの利用規約が別途適用されます。
 
-本Repositoryで特定されるUdemyコースへ適法に受講登録した個人、またはRanamicus Technology合同会社が別途書面で許諾した個人を`Eligible Learner`とします。Eligible Learnerは、個人学習と本コースのハンズオン演習のため、TemplateからPublicまたはPrivateの`Exercise Repository`を作成し、教材ファイルの変更、branch、commit、Pull Request、GitHub Actionsの実行、演習結果の保存・表示・公開を行えます。PublicのExercise Repositoryも許可されますが、第三者への一般的な再配布ライセンスを意味しません。
+本Repositoryで特定されるUdemyコースについて、Udemy上で現に適法な受講資格またはアクセス権を有する個人、またはRanamicus Technology合同会社による別途の書面許諾が有効に存続している個人を`Eligible Learner`とします。Eligible Learnerは、個人学習と本コースのハンズオン演習のため、TemplateからPublicまたはPrivateの`Exercise Repository`を作成し、教材ファイルの変更、branch、commit、Pull Request、GitHub Actionsの実行、演習結果の保存・表示・公開を行えます。PublicのExercise Repositoryも許可されますが、第三者への一般的な再配布ライセンスを意味しません。
+
+TemplateからExercise Repositoryを作成すること、教材を演習用にcloneすること、または演習のために教材を変更することは、`LICENSE`への同意を示す行為です。これらの追加的な権利を利用する前に、必ず[`LICENSE`](LICENSE)を読み、同意してください。適用法令上単独で有効に同意できない場合は、法定代理人その他権限を有する者の同意が必要です。一方、GitHubの利用規約または法令から直接与えられる権利に基づいてPublic Repositoryを単に閲覧し、またはGitHubの標準機能でforkすることだけでは、`LICENSE`への同意を示すものではありません。
+
+全額返金、購入の取消し、受講登録の解除、subscriptionによるアクセスの終了、アクセス権の取消しその他の理由によりコースへの適法なアクセスを失い、有効な書面許諾もない場合は、`Eligible Learner`ではなくなります。その場合は追加的な利用を停止し、資格喪失日から14日以内に、教材を含むExercise Repositoryを削除するか、保持するRepositoryから教材とその翻案部分をすべて削除してください。Privateへ変更するだけでは足りませんが、教材とは独立して創作した部分まで削除する必要はありません。詳細条件は`LICENSE`を確認してください。
 
 教材そのものまたは実質的部分の再販売、一般再配布、別教材への転載・組込み、社内外の研修教材への転用、commercial training、consultingの顧客成果物、製品・サービスへの無断組込み等は禁止されます。一方、教材から学んだ一般的な知識、技能、アイデア、概念、方法、ノウハウを業務・研究等へ適用すること自体は制限しません。
+
+当面、本家Repositoryへの外部からのPull Request、code、文書その他のContributionは原則として受け付けません。演習上の変更は、受講者本人が管理するExercise Repositoryで行ってください。将来外部Contributionを受け付ける場合の権利処理やContributor License Agreementは、必要に応じて別途定めます。
 
 第三者ソフトウェア、GitHub Actions、container image、package、service等には、それぞれのlicense、noticeおよび利用規約が適用されます。
 
@@ -135,4 +141,4 @@ bash scripts/exercises/apply-failure-scenario.sh static-analysis-failure
 - 参考英訳: [`LICENSE.en.md`](LICENSE.en.md)
 - 第三者資源の確認結果: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 
-READMEの説明と`LICENSE`が矛盾する場合は、`LICENSE`が優先します。現在の`LICENSE`は社外弁護士による最終確認前の`Draft for Legal Review`であり、Effective Dateは最終承認時に確定します。
+READMEの説明と`LICENSE`が矛盾する場合は、`LICENSE`が優先します。現在の`LICENSE`は社外弁護士による最終確認前の`Draft for Legal Review`です。Effective Dateは`[To be set upon final approval]`のままであり、現在は発効済みのライセンスではありません。

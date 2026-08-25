@@ -34,9 +34,16 @@ Repositoryをいいます。
 
 1.5 「Eligible Learner」とは、次のいずれかに該当する個人をいいます。
 
-(a) Repositoryで特定されるUdemyコースへ適法に受講登録した個人
+(a) Repositoryで特定されるUdemyコースについて、Udemy上で現に適法な受講資格
+またはアクセス権を有する個人
 
-(b) Licensorが別途書面で本LICENSEに基づく利用を許諾した個人
+(b) Licensorが別途書面で本LICENSEに基づく利用を許諾し、その許諾が有効に存続
+している個人
+
+(a)に該当していた個人は、全額返金、購入の取消し、受講登録の解除、subscriptionに
+よるアクセスの終了、アクセス権の取消しその他の理由により当該コースへの適法な
+アクセスを失った時点で、(b)の有効な書面による許諾がある場合を除き、Eligible
+Learnerではなくなります。
 
 Repositoryを閲覧したこと、またはGitHubからRepositoryへアクセスしたことだけでは、
 Eligible Learnerにはなりません。
@@ -66,6 +73,18 @@ GitHubの標準機能により閲覧もしくはforkできることは、Materia
 2.4 本LICENSEは、GitHubその他のプラットフォームに対し、Platform Termsに基づき
 直接付与される権利を禁止、否定または制限するものではありません。
 
+2.5 本LICENSEは、Eligible Learnerが第4条および第5条に定める追加的な権利を行使
+する前に、Repositoryのルートで確認できる状態で提示されます。
+
+2.6 第4条および第5条に定める追加的な権利を行使するには、本LICENSEへの同意が
+必要です。
+
+2.7 Template RepositoryからExercise Repositoryを作成すること、Materialsを演習用に
+cloneすること、または演習のためにMaterialsを変更することは、本LICENSEへの同意を
+示す行為です。ただし、Platform Termsまたは法令から直接与えられる権利に基づいて
+Repositoryを単に閲覧し、またはGitHubの標準機能でforkすることだけでは、本LICENSE
+への同意を示すものではありません。
+
 3. 権利帰属および限定的利用許諾
 
 3.1 Materialsの著作権その他の権利は、別段の表示がある場合を除き、Licensorに
@@ -77,6 +96,10 @@ GitHubの標準機能により閲覧もしくはforkできることは、Materia
 
 3.3 Third-Party Materialsには、それぞれの権利者が定める条件が適用され、本LICENSE
 によってLicensorへ権利が帰属し、またはLicensorから再許諾されるものではありません。
+
+3.4 適用法令上、本LICENSEへ単独で有効に同意できない個人は、第4条および第5条に
+定める権利を行使する前に、法定代理人その他適用法令上権限を有する者の同意を得なければ
+なりません。
 
 4. Eligible Learnerに許諾される利用
 
@@ -168,9 +191,11 @@ Eligible Learnerの独自創作部分の著作権がLicensorへ譲渡される�
 8.3 本条は、元のMaterialsまたはMaterialsの翻案部分についてLicensorが有する権利を
 失わせ、制限し、またはEligible Learnerへ移転するものではありません。
 
-8.4 本家Repositoryへの外部Contributionに適用される条件は、本LICENSEによる
-Exercise Repositoryの利用許諾とは別に定められます。本LICENSEは、外部Contribution
-に関する権利処理またはContributor License Agreementを定めるものではありません。
+8.4 当面、Licensorは、本家Repositoryに対する外部からのPull Request、code、文書
+その他のContributionを原則として受け付けません。演習は、各Eligible Learnerが管理する
+Exercise Repositoryで行います。Licensorが将来外部Contributionを受け付ける場合は、
+必要な権利処理およびContributor License Agreementの要否を別途定めます。本LICENSE
+自体は、外部Contributionを受け付け、またはその権利処理を定めるものではありません。
 
 9. Third-Party Materials
 
@@ -215,30 +240,48 @@ Third-Party Materialsのnoticeを保持しなければなりません。
 適合性、正確性、完全性、継続利用可能性その他一切の明示または黙示の保証を
 行いません。
 
-12.3 適用法令で認められる最大限の範囲で、Licensorは、Materialsの利用または利用
-不能から生じる間接損害、特別損害、付随的損害、派生的損害、逸失利益、データ喪失
-その他これらに類する損害について責任を負いません。
+12.3 当該損害がLicensorの故意または重過失によらない場合に限り、かつ適用法令で
+認められる最大限の範囲で、Licensorは、Materialsの利用または利用不能から生じる
+間接損害、特別損害、付随的損害、派生的損害、逸失利益、データ喪失その他これらに
+類する損害について責任を負いません。
 
 12.4 本条は、強行法規により免責または制限できない責任を免責または制限するものでは
 ありません。Licensorの故意または重過失に起因する責任その他法令上免責できない責任
 には、本条の免責または制限を適用しません。
 
-12.5 本LICENSEは、責任額の上限を定めません。責任額上限の要否および内容は、最終
-承認時の法務レビュー事項です。
-
 13. 違反時の利用許諾の終了
 
-13.1 Eligible Learnerが本LICENSEの条件に違反した場合、Licensorは、本LICENSEに
-基づき追加的に付与した利用許諾を終了させることができます。
+13.1 Eligible Learnerが、性質上是正可能な本LICENSE違反をした場合、Licensorは、
+当該違反を特定して是正を求める通知を行います。当該Eligible Learnerは、通知を受領
+した日から14日以内に違反を十分に是正することができ、期間内に十分な是正が完了した
+場合、当該違反を理由として利用許諾は終了しません。期間内に十分な是正が完了しない
+場合、Licensorは、本LICENSEに基づき追加的に付与した利用許諾を終了させることが
+できます。
 
-13.2 利用許諾終了後、当該Eligible Learnerは、Licensorが別途書面で再許諾した場合を
-除き、本LICENSEにより追加的に許可されていた利用を継続できません。
+13.2 前項にかかわらず、故意による無断の再販売、一般向け再配布もしくはcommercial
+trainingへの利用、重大な違反を繰り返した場合、または性質上是正不能な重大な違反が
+あった場合、Licensorは、是正期間を設けず、直ちに利用許諾を終了させることができます。
 
-13.3 本条による終了は、適用法令またはPlatform Termsから利用者へ直接与えられる権利
+13.3 利用許諾終了後、当該個人は、Licensorが別途書面で再許諾した場合を除き、
+本LICENSEにより追加的に許可されていた利用を継続できません。
+
+13.4 利用許諾は、終了後に違反が是正されたことだけを理由として自動的に復活しません。
+終了後に本LICENSEに基づく追加的な利用を再開するには、Licensorによる書面の再許諾が
+必要です。
+
+13.5 本条による終了は、適用法令またはPlatform Termsから利用者へ直接与えられる権利
 を終了させるものではありません。
 
-13.4 違反是正による自動復活、猶予期間その他の復活条件は、本ドラフトでは定めません。
-これらの条件の要否および内容は、最終承認時の法務レビュー事項です。
+13.6 第1.5条によりEligible Learnerでなくなった個人は、その時点で本LICENSEに基づく
+追加的な利用を停止し、資格喪失日から14日以内に、Materialsを含むExercise Repository
+を削除するか、当該Repositoryを保持する場合は、Materialsおよびその翻案部分をすべて
+削除しなければなりません。当該RepositoryをPrivateにすることだけでは、この義務を
+満たしません。ただし、Materialsまたはその翻案部分に該当しない独自創作部分を削除する
+必要はありません。
+
+13.7 第1.5条による資格喪失および前項の義務は、Platform Termsまたは法令から直接
+与えられる権利に基づいてPublic Repositoryを単に閲覧することを禁止するものではなく、
+そのような閲覧だけで本LICENSEへの違反となるものでもありません。
 
 14. Versionおよび将来の改定
 
@@ -250,13 +293,17 @@ Third-Party Materialsのnoticeを保持しなければなりません。
 14.3 新しいVersionは、既に取得されたMaterialsまたは既存のExercise Repositoryへ
 当然には遡及適用されません。
 
-14.4 Exercise RepositoryにおけるMaterialsの利用には、原則として、当該Exercise
-Repositoryの作成時または当該Materialsの取得時に明示されていたVersionを基礎として
-適用します。後に取得した新しいMaterialsに別のVersionが明示されている場合、その
-新しいMaterialsには明示されたVersionが適用されます。
+14.4 Exercise Repositoryにおける既存のMaterialsの利用には、原則として、当該
+Exercise Repositoryの作成時または当該Materialsの取得時に明示されていたVersionを
+適用します。
 
-14.5 既存利用者へ新Versionを例外的に適用する条件は、本ドラフトでは定めません。
-その要否および内容は、最終承認時の法務レビュー事項です。
+14.5 既存のMaterialsまたは既存のExercise Repositoryへ新しいVersionを適用するには、
+影響を受ける利用者による明示的な同意が必要です。Licensorが新しいVersionを公開し、
+または一方的に通知したことだけでは、そのVersionを既存のMaterialsまたは既存の
+Exercise Repositoryへ遡及適用することはできません。
+
+14.6 利用者が、新しいVersionが明示されたMaterialsを新たに取得し、または利用した
+場合、その新しいMaterialsには、明示された新しいVersionが適用されます。
 
 15. Udemyとの関係
 
@@ -272,13 +319,18 @@ Udemyの利用規約その他の条件を変更し、置き換え、または上
 
 16. 準拠法および裁判管轄
 
-16.1 本LICENSEは、日本法に準拠し、日本法に従って解釈されます。
+16.1 本LICENSEは、日本法に準拠し、日本法に従って解釈されます。ただし、利用者の
+常居所地その他の適用法令により排除できない強行法規または消費者保護は排除されません。
 
 16.2 本LICENSEまたはMaterialsに関連してLicensorとEligible Learnerとの間に生じる
 紛争については、東京地方裁判所を第一審の専属的合意管轄裁判所とします。ただし、
-強行法規その他の適用法令によりこの合意が認められない場合を除きます。
+強行法規、消費者保護法その他の適用法令により排除できない裁判管轄が適用される場合を
+除きます。
 
-16.3 本条は、GitHub、Udemyその他の第三者との契約に適用される準拠法または裁判管轄を
+16.3 本条は、適用法令により放棄または制限できない利用者の権利、救済、消費者保護
+その他の保護を放棄または制限するものではありません。
+
+16.4 本条は、GitHub、Udemyその他の第三者との契約に適用される準拠法または裁判管轄を
 変更し、置き換え、または上書きするものではありません。
 
 17. 言語および優先関係

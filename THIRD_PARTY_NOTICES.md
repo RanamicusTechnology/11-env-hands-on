@@ -76,9 +76,9 @@ wheel、Terraform binary/provider binary、Ubuntu image、Nginx binaryまたはD
 | Requests 2.32.4 | `requirements/ms1.txt`から実行時installし、正式APIテストに利用 | [v2.32.4 LICENSE](https://github.com/psf/requests/blob/v2.32.4/LICENSE) | Apache License 2.0 | packageをGit treeへ複製していない。transitive dependenciesは実際のinstall metadataで確認する。 |
 | PyYAML 6.0.2 | `requirements/learning-assets.txt`から実行時installし、教材validatorでYAMLを処理 | [6.0.2 LICENSE](https://github.com/yaml/pyyaml/blob/6.0.2/LICENSE) | MIT License | packageをGit treeへ複製していない。複製または再配布時はCopyright noticeとlicense textを保持する。 |
 
-## 6. 未確認事項と公開前の追加確認
+## 6. 確認状態と将来の配布時確認
 
-次は、推測で確定せず、社外弁護士レビューまたは実際の配布物生成時に確認します。
+次の事項は現時点で正確な値を確定できないため、実際の配布物を生成する時点で確認します。
 
 - Ansible community package 13.8.0に含まれる全collection、正確なversionおよびfile単位の
   license
@@ -92,5 +92,9 @@ wheel、Terraform binary/provider binary、Ubuntu image、Nginx binaryまたはD
   binary等を将来配布対象へ追加する場合に必要となるlicense text、NOTICE、source offer、
   attributionおよびtrademark上の対応
 
-第三者資源を更新または新規追加した場合は、dependency定義だけでなく、本文書の名称、
-利用形態、upstream、license確認先およびnotice上の注意も同じ変更で更新してください。
+会社が将来、container image、binary、第三者dependencyを同梱した配布物その他の成果物を
+配布する場合は、配布前に別途の法務確認を行い、実際の配布内容に基づくSBOM、license text、
+NOTICE、source offer、attributionその他の義務を確定します。
+
+第三者資源を更新または新規追加する変更では、dependency定義とともに、本文書の名称、
+利用形態、upstream、license確認先およびnotice上の注意も再確認の対象となります。
