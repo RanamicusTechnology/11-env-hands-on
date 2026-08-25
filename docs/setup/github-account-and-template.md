@@ -53,7 +53,22 @@ Publicであることは、この教材がオープンソースとして自由�
 3. [GitHub](https://github.com/)へ、受講に使う個人アカウントでサインインする。
 4. 既にアカウントを持っている場合は、サインインしているアカウントだけを確認して次へ進む。
 
-## 2. テンプレートから演習用リポジトリを作成する
+## 2. LICENSEを確認する
+
+公開テンプレートから演習用リポジトリを作成する前に、Repositoryルートの日本語正文
+[`LICENSE`](../../LICENSE)を読み、条件へ同意する。参考英訳は
+[`LICENSE.en.md`](../../LICENSE.en.md)で確認できる。
+
+TemplateからExercise Repositoryを作成すること、教材を演習用にcloneすること、または
+演習のために教材を変更することは、`LICENSE`への同意を示す行為である。これらの追加的な
+教育利用権を使う前に、`LICENSE`への同意が必要となる。適用法令上、単独で有効に同意
+できない場合は、法定代理人その他権限を有する者の同意を得てから進む。
+
+GitHubの利用規約その他のPlatform Termsまたは法令から直接与えられる権利に基づく
+単なる閲覧またはGitHubの標準機能によるforkだけでは、`LICENSE`への同意を示すものでは
+ない。
+
+## 3. テンプレートから演習用リポジトリを作成する
 
 ここまではGitHub Web UIで操作する。
 
@@ -78,13 +93,13 @@ Publicであることは、この教材がオープンソースとして自由�
 - `Actions`タブへアクセスできる。
 - 完成版PR CIが最初から有効になっていない。
 
-## 3. Repository設定Phase Aを行う
+## 4. Repository設定Phase Aを行う
 
 作成した演習用リポジトリのWeb UIで、[リポジトリ設定手順](repository-settings.md)のPhase Aを行う。GitHub Actions、workflow permissions、merge方式、`main-protection` Rulesetの基本設定を保存する。
 
 5.1では`pr-ci-gate`をまだRequired checkへ登録せず、Rulesetを`Disabled`で保存する。Phase Bは5.2の初回`pr-ci-gate`成功後に行う。
 
-## 4. GitとBashを確認する
+## 5. GitとBashを確認する
 
 ここからローカルPCのGit Bashまたは同等のBashへ移る。
 
@@ -95,9 +110,9 @@ bash --version
 
 Windowsでコマンドが見つからない場合はGit for WindowsのインストールとGit Bashの起動を確認する。macOS／Linuxでは、利用中OSの標準手順でGitを準備する。
 
-## 5. 自分の演習用リポジトリをcloneする
+## 6. 自分の演習用リポジトリをcloneする
 
-公開テンプレートではなく、手順2で自分のアカウントに作成した演習用リポジトリを、ローカルにcloneする。`<account>`と`<repository>`は、自分のOwner名とリポジトリ名へ置き換える。
+公開テンプレートではなく、手順3で自分のアカウントに作成した演習用リポジトリを、ローカルにcloneする。`<account>`と`<repository>`は、自分のOwner名とリポジトリ名へ置き換える。
 
 ```bash
 git clone https://github.com/<account>/<repository>.git
@@ -113,14 +128,16 @@ git status
 
 | 順序 | 操作場所 | 操作 |
 | --- | --- | --- |
-| 1 | GitHub Web UI | Templateから自分の演習用リポジトリを作成する。 |
-| 2 | GitHub Web UI | Repository設定Phase Aを行う。 |
-| 3 | ローカルGit／Bash | 自分の演習用リポジトリをcloneし、Repositoryルートへ移動する。 |
-| 4 | GitHub Web UIとローカルGit／Bash | [Lesson 5.2](../lessons/5.2-change-and-pipeline-setup.md)でIssue、branch、段階patch、Draft Pull Requestをつなぐ。 |
+| 1 | GitHub Web UI | `LICENSE`を確認して同意する。 |
+| 2 | GitHub Web UI | Templateから自分の演習用リポジトリを作成する。 |
+| 3 | GitHub Web UI | Repository設定Phase Aを行う。 |
+| 4 | ローカルGit／Bash | 自分の演習用リポジトリをcloneし、Repositoryルートへ移動する。 |
+| 5 | GitHub Web UIとローカルGit／Bash | [Lesson 5.2](../lessons/5.2-change-and-pipeline-setup.md)でIssue、branch、段階patch、Draft Pull Requestをつなぐ。 |
 
 ## 完了チェック
 
 - [ ] 受講に使う個人GitHubアカウントへサインインできる。
+- [ ] 追加的な教育利用権を使う前に`LICENSE`を読み、同意した。
 - [ ] Public利用時の注意を確認した。
 - [ ] 公開テンプレートから、受講者本人がOwnerの独立した演習用リポジトリを作成した。
 - [ ] `Include all branches`を選択していない。
