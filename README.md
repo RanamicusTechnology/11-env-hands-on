@@ -4,6 +4,9 @@ Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 
 # 開発・テスト環境の設計・運用の勘所 ハンズオン
 
+**本教材をハンズオンで利用する方へ**<br>
+TemplateからExercise Repositoryを作成する等、本教材の追加的な教育利用権を利用する前に、[LICENSE](LICENSE)を確認し、同意してください。
+
 このリポジトリは、Udemyコース「開発・テスト環境の設計・運用の勘所◎IaC・CI/CD・テスト自動化とガバナンスで『継続的な変更の容易さ』を実現」のセクション5「ハンズオン演習」で使用する教材資源を作成・維持するためのものです。
 
 本ハンズオンでは、GitHub Issueで変更要求を記録し、Pull Request、GitHub Actions、アーティファクト管理、使い捨てUT環境、自動テスト、証跡、品質ゲートを1本の流れとして体験します。個別ツールの網羅ではなく、変更を継続しやすくする仕組み同士の関係を理解することを目的にします。
@@ -127,9 +130,9 @@ bash scripts/exercises/apply-failure-scenario.sh static-analysis-failure
 
 本Repositoryで特定されるUdemyコースについて、Udemy上で現に適法な受講資格またはアクセス権を有する個人、またはRanamicus Technology合同会社による別途の書面許諾が有効に存続している個人を`Eligible Learner`とします。Eligible Learnerは、個人学習と本コースのハンズオン演習のため、TemplateからPublicまたはPrivateの`Exercise Repository`を作成し、教材ファイルの変更、branch、commit、Pull Request、GitHub Actionsの実行、演習結果の保存・表示・公開を行えます。PublicのExercise Repositoryも許可されますが、第三者への一般的な再配布ライセンスを意味しません。
 
-TemplateからExercise Repositoryを作成すること、教材を演習用にcloneすること、または演習のために教材を変更することは、`LICENSE`への同意を示す行為です。これらの追加的な権利を利用する前に、必ず[`LICENSE`](LICENSE)を読み、同意してください。適用法令上単独で有効に同意できない場合は、法定代理人その他権限を有する者の同意が必要です。一方、GitHubの利用規約または法令から直接与えられる権利に基づいてPublic Repositoryを単に閲覧し、またはGitHubの標準機能でforkすることだけでは、`LICENSE`への同意を示すものではありません。
+Eligible LearnerがTemplateからExercise Repositoryを作成すること、教材を演習用にcloneすること、または演習のために教材を変更することは、`LICENSE`への同意を示す行為です。これらの追加的な権利を利用する前に、必ず[`LICENSE`](LICENSE)を読み、同意してください。適用法令上単独で有効に同意できない場合は、法定代理人その他権限を有する者の同意を得た場合に限り、追加的な権利を利用できます。一方、GitHubの利用規約または法令から直接与えられる権利に基づいてPublic Repositoryを単に閲覧し、またはGitHubの標準機能でforkすることだけでは、`LICENSE`への同意を示すものではありません。Eligible Learnerでない者には本LICENSEによる追加的な許諾はなく、GitHubの利用規約または著作権法その他の法令により直接認められる範囲を超えて教材を利用することはできません。
 
-全額返金、購入の取消し、受講登録の解除、subscriptionによるアクセスの終了、アクセス権の取消しその他の理由によりコースへの適法なアクセスを失い、有効な書面許諾もない場合は、`Eligible Learner`ではなくなります。その場合は追加的な利用を停止し、資格喪失日から14日以内に、教材を含むExercise Repositoryを削除するか、保持するRepositoryから教材とその翻案部分をすべて削除してください。Privateへ変更するだけでは足りませんが、教材とは独立して創作した部分まで削除する必要はありません。詳細条件は`LICENSE`を確認してください。
+全額返金、購入の取消し、受講登録の解除、subscriptionによるアクセスの終了、アクセス権の取消しその他の理由によりコースへの適法なアクセスを失い、有効な書面許諾もない場合は、`Eligible Learner`ではなくなり、それ以後の追加的な権利の行使を停止する必要があります。全額返金、本人による取消し、subscription終了等の本人側の事情による資格喪失では、資格喪失を知った日から14日以内に、教材の全部または実質的部分を含むPublic Exercise RepositoryをPrivateにするか、その教材の公開を停止します。講座の非公開化・提供終了等のLicensorまたはUdemy側の事情による資格喪失では、既存Repositoryの削除・Private化は義務付けられません。Private Repositoryとローカルコピーは私的参照のため保持できますが、新たな追加的権利は付与されません。実際の違反がある場合は、個別通知により、違反の停止や合理的に必要な範囲での対象部分の削除が求められることがあります。詳細条件は`LICENSE`を確認してください。
 
 教材そのものまたは実質的部分の再販売、一般再配布、別教材への転載・組込み、社内外の研修教材への転用、commercial training、consultingの顧客成果物、製品・サービスへの無断組込み等は禁止されます。一方、教材から学んだ一般的な知識、技能、アイデア、概念、方法、ノウハウを業務・研究等へ適用すること自体は制限しません。
 
