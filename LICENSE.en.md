@@ -328,20 +328,26 @@ and 5 to copy or modify the Materials, create an Exercise Repository, publish,
 redistribute, or engage in other additionally licensed uses. The following
 rules apply after loss of eligibility:
 
-(a) If eligibility is lost because of a full refund, the individual's own
-purchase cancellation or unenrollment, loss of subscription access, or another
-circumstance attributable to the individual, the individual must, within 14
-days after becoming aware of the loss of eligibility, either make Private any
-Public Exercise Repository containing all or a substantial portion of the
-Materials or cease public availability of all or a substantial portion of the
-Materials.
+(a) If the individual loses eligibility as a direct result of a full refund
+requested and received by the individual, the individual's voluntary
+cancellation of the purchase or enrollment, the individual's cancellation or
+non-renewal of a subscription, or another circumstance resulting from the
+individual's choice or attributable to the individual, the individual must,
+within 14 days after becoming aware of the loss of eligibility, either make
+Private any Public Exercise Repository containing all or a substantial portion
+of the Materials or cease public availability of all or a substantial portion
+of the Materials.
 
-(b) If eligibility is lost because the course is made unavailable or
-discontinued, or because of another circumstance attributable to the Licensor
-or Udemy, there is no obligation to delete or make Private an existing Exercise
-Repository. The individual nevertheless may not newly exercise any of the
-additional rights described in the preceding paragraph after losing
-eligibility.
+(b) If the individual loses eligibility for a reason not covered by the
+preceding item, including the course being made unavailable or discontinued,
+termination of a subscription or access by the Licensor or Udemy for reasons
+not attributable to the individual, or another such circumstance, there is no
+obligation to delete or make Private an existing Exercise Repository. The
+individual nevertheless may not newly exercise any of the additional rights
+described in the first paragraph of Section 13.6 after losing eligibility. If
+multiple circumstances contributed to the loss of eligibility, the applicable
+item is determined by the primary direct cause. If the primary direct cause
+cannot reasonably be determined, this item applies.
 
 (c) A Private Exercise Repository and local copies may be retained for private
 reference. Retaining them does not grant a right to newly exercise any
