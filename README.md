@@ -144,4 +144,4 @@ Eligible LearnerがTemplateからExercise Repositoryを作成すること、教�
 - 参考英訳: [`LICENSE.en.md`](LICENSE.en.md)
 - 第三者資源の確認結果: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 
-READMEの説明と`LICENSE`が矛盾する場合は、`LICENSE`が優先します。現在の`LICENSE`は社外弁護士による最終確認前の`Draft for Legal Review`です。Effective Dateは`[To be set upon final approval]`のままであり、現在は発効済みのライセンスではありません。
+READMEの説明と`LICENSE`が矛盾する場合は、`LICENSE`が優先します。Educational Materials License Version 1.0のEffective Dateは`2026-09-10`です。

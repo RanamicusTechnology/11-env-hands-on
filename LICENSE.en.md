@@ -3,16 +3,11 @@ Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 # Educational Materials License
 
 Version 1.0
-Draft for Legal Review
 
-Effective Date: [To be set upon final approval]
+Effective Date: 2026-09-10
 Licensor: Ranamicus Technology LLC (Ranamicus Technology合同会社)
 
 ## English Translation for Reference
-
-This document is a draft for legal review before final review by external
-legal counsel. It must not be treated as a finally approved or effective
-license.
 
 The Japanese `LICENSE` is the governing version of this proprietary
 educational materials license. This LICENSE is not an Open Source Software
