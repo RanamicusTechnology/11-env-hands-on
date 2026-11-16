@@ -2,12 +2,12 @@
 Copyright 2026 Ranamicus Technology LLC. All rights reserved.
 -->
 
-# 開発・テスト環境の設計・運用の勘所 ハンズオン
+# DevOpsを支える環境設計 ハンズオン
 
 **本教材をハンズオンで利用する方へ**<br>
 TemplateからExercise Repositoryを作成する等、本教材の追加的な教育利用権を利用する前に、[LICENSE](LICENSE)を確認し、同意してください。
 
-このリポジトリは、Udemyコース「開発・テスト環境の設計・運用の勘所◎IaC・CI/CD・テスト自動化とガバナンスで『継続的な変更の容易さ』を実現」のセクション5「ハンズオン演習」で使用する教材資源を作成・維持するためのものです。
+このリポジトリは、Udemyコース「[DevOpsを支える環境設計◎開発・テスト・本番環境とIaC・CI/CDの全体像](https://www.udemy.com/course/iaccicd-o/)」のセクション5「ハンズオン演習」で使用する教材資源を作成・維持するためのものです。
 
 本ハンズオンでは、GitHub Issueで変更要求を記録し、Pull Request、GitHub Actions、アーティファクト管理、使い捨てUT環境、自動テスト、証跡、品質ゲートを1本の流れとして体験します。個別ツールの網羅ではなく、変更を継続しやすくする仕組み同士の関係を理解することを目的にします。
 
